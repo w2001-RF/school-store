@@ -1,7 +1,9 @@
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1>📚 School Store</h1>
+      <div class="brand-mark" aria-hidden="true">📚</div>
+      <p class="eyebrow">Gestion scolaire</p>
+      <h1>School Store</h1>
       <p class="subtitle">{{ $t('login.subtitle') }}</p>
 
       <div class="tabs">
@@ -75,34 +77,37 @@ async function handleSubmit() {
 <style scoped>
 .login-page {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  background: radial-gradient(circle at 12% 18%, rgba(245,200,107,.45), transparent 28%), linear-gradient(135deg, #075b60 0%, #087f78 54%, #e9f2ee 140%);
   padding: 20px;
 }
 .login-card {
-  background: white; padding: 36px; border-radius: 16px;
-  width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,.96); padding: 38px; border: 1px solid rgba(255,255,255,.65); border-radius: 20px;
+  width: 100%; max-width: 440px; box-shadow: 0 24px 70px rgba(7, 49, 54, .25);
 }
-h1 { margin: 0 0 8px; font-size: 1.7rem; }
+.brand-mark { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: 16px; border-radius: 16px; background: #f5c86b; font-size: 1.8rem; }
+.eyebrow { margin: 0 0 4px; color: #087f78; font-size: .74rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+h1 { margin: 0 0 8px; color: #173042; font-size: 2rem; }
 .subtitle { color: #6b7280; margin: 0 0 20px; }
-.tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #f3f4f6; border-radius: 8px; padding: 4px; }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #eaf1ef; border-radius: 10px; padding: 4px; }
 .tabs button {
   flex: 1; background: none; border: none; padding: 8px;
   border-radius: 6px; cursor: pointer; font-weight: 500;
 }
-.tabs button.active { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.tabs button.active { background: white; color: #075b60; box-shadow: 0 3px 8px rgba(23,48,66,.1); }
 .form-group { margin-bottom: 14px; }
 label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.9rem; }
 input, select {
-  width: 100%; padding: 10px 12px; border: 1px solid #d1d5db;
-  border-radius: 8px; font-size: 1rem; box-sizing: border-box;
+  width: 100%; padding: 11px 12px; border: 1px solid #ccd9d6;
+  border-radius: 9px; font-size: 1rem; box-sizing: border-box; background: #fbfdfc;
 }
-input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+input:focus, select:focus { outline: none; border-color: #087f78; box-shadow: 0 0 0 3px rgba(8,127,120,.12); }
 .btn-primary {
-  width: 100%; padding: 12px; background: #3b82f6; color: white;
-  border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
+  width: 100%; padding: 13px; background: #ef765d; color: white;
+  border: none; border-radius: 9px; font-size: 1rem; font-weight: 700; cursor: pointer;
   margin-top: 8px;
 }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary:hover:not(:disabled) { background: #d95d4f; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(217,93,79,.25); }
 .error {
   color: #dc2626; background: #fee2e2; padding: 10px;
   border-radius: 6px; margin-bottom: 12px; font-size: 0.9rem;
@@ -115,5 +120,10 @@ input:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 
 .env-hint code {
   background: #1e293b; color: #10b981; padding: 2px 6px;
   border-radius: 4px; font-family: monospace;
+}
+
+@media (max-width: 480px) {
+  .login-card { padding: 28px 22px; }
+  .login-page { padding: 14px; }
 }
 </style>
