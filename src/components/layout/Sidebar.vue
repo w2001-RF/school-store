@@ -2,7 +2,7 @@
   <aside class="sidebar" :class="{ open }">
     <div class="brand">
       <span class="logo">📚</span>
-      <span class="brand-name">School Store</span>
+      <span><strong class="brand-name">School Store</strong><small>gestion scolaire</small></span>
     </div>
     <nav class="nav">
       <router-link to="/dashboard" class="nav-item" @click="$emit('close')">
@@ -37,23 +37,25 @@ const auth = useAuthStore()
 
 <style scoped>
 .sidebar {
-  width: 240px; background: #1e293b; color: white;
+  width: 250px; background: var(--teal-dark); color: white;
   display: flex; flex-direction: column; flex-shrink: 0;
 }
 .brand {
-  padding: 20px; display: flex; align-items: center; gap: 10px;
+  padding: 24px 20px; display: flex; align-items: center; gap: 12px;
   font-size: 1.1rem; font-weight: 700;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid rgba(255,255,255,.14);
 }
 .logo { font-size: 1.6rem; }
+.brand-name { display: block; }
+.brand small { display: block; margin-top: 3px; color: #a8d6d1; font-size: .72rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; }
 .nav { display: flex; flex-direction: column; padding: 12px 0; flex: 1; }
 .nav-item {
-  padding: 12px 20px; color: #cbd5e1; text-decoration: none;
+  margin: 3px 12px; padding: 13px 14px; color: #c3e0dc; text-decoration: none;
   display: flex; align-items: center; gap: 12px;
-  transition: all 0.15s;
+  border-radius: 10px;
 }
-.nav-item:hover { background: #334155; color: white; }
-.nav-item.router-link-exact-active { background: #3b82f6; color: white; }
+.nav-item:hover { background: rgba(255,255,255,.1); color: white; transform: translateX(3px); }
+.nav-item.router-link-exact-active { background: #f5c86b; color: #173042; box-shadow: 0 8px 18px rgba(0,0,0,.12); }
 .nav-item.highlight { background: #10b981; color: white; margin: 8px 12px; border-radius: 6px; }
 .nav-item.highlight:hover { background: #059669; }
 .backdrop { display: none; }
@@ -61,7 +63,7 @@ const auth = useAuthStore()
 @media (max-width: 768px) {
   .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
-    transform: translateX(-100%); transition: transform 0.3s;
+    transform: translateX(-100%); transition: transform 0.3s ease;
   }
   .sidebar.open { transform: translateX(0); }
   .backdrop {

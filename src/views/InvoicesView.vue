@@ -157,7 +157,7 @@ async function confirmDeletion() {
 .filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .filters input, .filters select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; }
 .filters input { flex: 1; min-width: 200px; }
-.data-table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-collapse: collapse; }
+.data-table { width: 100%; min-width: 760px; background: white; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); border-collapse: collapse; }
 .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
 .data-table th { background: #f9fafb; font-weight: 600; font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
 .status { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
@@ -172,6 +172,8 @@ async function confirmDeletion() {
 .refresh-button { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; cursor: pointer; white-space: nowrap; }
 .refresh-button:disabled { cursor: wait; opacity: .55; }
 .empty { text-align: center; padding: 40px; color: #6b7280; background: white; border-radius: 8px; }
+.data-table { display: table; }
+@media (max-width: 800px) { .data-table { display: block; overflow-x: auto; } }
 .confirmation-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(17, 24, 39, 0.45); }
 .confirmation-dialog { width: min(100%, 420px); padding: 24px; border-radius: 10px; background: white; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); }
 .confirmation-dialog h3 { margin: 0 0 8px; color: #1f2937; }

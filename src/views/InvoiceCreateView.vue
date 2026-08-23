@@ -127,6 +127,7 @@
         </div>
       </div>
     </Modal>
+    <div v-if="toastMessage" class="mobile-toast" role="status" aria-live="polite">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -158,6 +159,8 @@ const customerName = computed({
 
 const showPayment = ref(false)
 const paidAmount = ref(0)
+const toastMessage = ref('')
+let toastTimer
 const quickAmounts = computed(() => {
   const total = invoices.currentTotal || 0
   const arr = [total, Math.ceil(total / 10) * 10, Math.ceil(total / 50) * 50, Math.ceil(total / 100) * 100, Math.ceil(total / 100) * 200]
@@ -189,7 +192,10 @@ onMounted(async () => {
   const passager = clients.items.find(client => client.name.toLowerCase() === 'passager')
   if (passager) await selectClient(passager)
 })
-onBeforeUnmount(() => { window.removeEventListener('resize', checkMobile) })
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkMobile)
+  clearTimeout(toastTimer)
+})
 
 function getMaxStock(line) {
   const p = products.items.find(p => p.id === line.product_id)
@@ -250,10 +256,17 @@ function confirmPayment() {
   invoices.validate({ paid_amount: paidAmount.value })
     .then(invoice => {
       showPayment.value = false
-      alert(`✅ ${t('invoiceCreate.success')}`)
+      if (isMobile.value) showToast(`✅ ${t('invoiceCreate.success')}`)
+      else alert(`✅ ${t('invoiceCreate.success')}`)
       router.push({ name: 'invoice-detail', params: { id: invoice.id } })
     })
     .catch(e => alert('❌ ' + e.message))
+}
+
+function showToast(message) {
+  toastMessage.value = message
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toastMessage.value = '' }, 3200)
 }
 
 function checkMobile() {
@@ -305,6 +318,9 @@ function checkMobile() {
 .quick-btn { padding: 6px 12px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.mobile-toast { position: fixed; left: 50%; bottom: 22px; z-index: 1100; max-width: calc(100vw - 32px); padding: 13px 18px; transform: translateX(-50%); border-radius: 10px; background: #075b60; color: white; box-shadow: 0 10px 24px rgba(7, 91, 96, .25); text-align: center; font-weight: 600; animation: toast-in .2s ease-out; }
+
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 @media (max-width: 900px) {
   .invoice-grid { grid-template-columns: 1fr; }

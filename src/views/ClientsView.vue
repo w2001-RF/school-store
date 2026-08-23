@@ -140,7 +140,8 @@ async function removeClient(client) {
 .btn-primary { background: #3b82f6; color: white; }
 .btn-secondary { background: #e5e7eb; color: #374151; }
 .clients-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
-.client-card { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.client-card { background: white; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.client-card:hover { transform: translateY(-3px); box-shadow: 0 16px 30px rgba(23,48,66,.12); }
 .client-card h3 { margin: 0 0 10px; }
 .client-card p { margin: 6px 0; color: #4b5563; font-size: .9rem; overflow-wrap: anywhere; }
 .client-card .notes { color: #6b7280; }

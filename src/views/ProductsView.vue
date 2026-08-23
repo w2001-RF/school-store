@@ -221,9 +221,10 @@ async function confirmDelete(p) {
 .bulk-delete { padding: 10px 12px; border: 1px solid #fecaca; border-radius: 8px; background: #fef2f2; color: #b91c1c; cursor: pointer; }
 .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .product-card {
-  background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: white; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 8px;
 }
+.product-card:hover { transform: translateY(-3px); box-shadow: 0 16px 30px rgba(23,48,66,.12); }
 .select-item { align-self: flex-start; width: 16px; height: 16px; }
 .product-image { width: 100%; height: 140px; object-fit: scale-down; border-radius: 8px; background: #f3f4f6; }
 .product-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
@@ -234,6 +235,7 @@ async function confirmDelete(p) {
 .price { margin: 8px 0; font-size: 1.3rem; font-weight: 700; color: #3b82f6; }
 .actions { display: flex; gap: 8px; margin-top: auto; }
 .btn-icon { background: #f3f4f6; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+.btn-icon:hover { background: #e4f1ef; transform: translateY(-1px); }
 .btn-icon.danger:hover { background: #fee2e2; }
 .empty { text-align: center; padding: 40px; color: #6b7280; }
 .hint { color: #6b7280; font-size: .9rem; }

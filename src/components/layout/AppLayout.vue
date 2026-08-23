@@ -58,34 +58,35 @@ async function logout() {
 .app-layout { display: flex; min-height: 100vh; }
 .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .topbar {
-  background: white; padding: 12px 20px; display: flex; align-items: center; gap: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10;
+  background: rgba(255,255,255,.9); padding: 16px 28px; display: flex; align-items: center; gap: 18px;
+  border-bottom: 1px solid var(--line); backdrop-filter: blur(14px); position: sticky; top: 0; z-index: 10;
 }
 .hamburger {
   background: none; border: none; font-size: 24px; cursor: pointer;
   display: none; padding: 4px 8px;
 }
-.topbar-title { font-size: 1.25rem; margin: 0; flex: 1; }
+.topbar-title { font-size: 1.3rem; margin: 0; flex: 1; color: var(--ink); }
 .user-info { display: flex; align-items: center; gap: 12px; }
 .language-picker { display: flex; align-items: center; gap: 4px; }
-.language-picker select { max-width: 105px; padding: 5px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; }
+.language-picker select { max-width: 105px; padding: 7px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); }
 .user-name { font-weight: 500; }
 .role-badge {
-  padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
   text-transform: uppercase;
 }
-.role-badge.manager { background: #dbeafe; color: #1e40af; }
-.role-badge.agent { background: #dcfce7; color: #166534; }
+.role-badge.manager { background: #fff0ca; color: #8a5e10; }
+.role-badge.agent { background: #d9f2ed; color: var(--teal-dark); }
 .btn-icon {
-  background: none; border: 1px solid #e5e7eb; padding: 6px 10px; cursor: pointer;
-  border-radius: 6px; font-size: 1.1rem;
+  background: white; border: 1px solid var(--line); padding: 8px 11px; cursor: pointer;
+  border-radius: 9px; font-size: 1.1rem;
 }
-.btn-icon:hover { background: #f3f4f6; }
-.content { padding: 24px; flex: 1; background: #f9fafb; }
+.btn-icon:hover { background: #edf6f4; transform: translateY(-1px); }
+.content { width: 100%; max-width: 1440px; margin: 0 auto; padding: 30px 34px 48px; flex: 1; background: var(--paper); }
 
 @media (max-width: 768px) {
   .hamburger { display: block; }
   .user-name { display: none; }
-  .content { padding: 16px; }
+  .topbar { padding: 13px 16px; }
+  .content { padding: 20px 16px 32px; }
 }
 </style>

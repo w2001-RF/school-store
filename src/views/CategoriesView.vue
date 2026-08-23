@@ -140,7 +140,8 @@ async function createRows(rows, onProgress = () => {}) {
 .btn-secondary { background: #e5e7eb; color: #374151; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
 .hint { color: #6b7280; font-size: .9rem; }
 .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.cat-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.cat-card { background: white; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.cat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 30px rgba(23,48,66,.12); }
 .select-item { width: 16px; height: 16px; margin-bottom: 8px; }
 .cat-card h3 { margin: 0 0 6px; }
 .cat-card p { color: #6b7280; margin: 0 0 12px; font-size: 0.9rem; }

@@ -1,6 +1,13 @@
 <template>
   <div class="dashboard">
-    <h2>Bonjour, {{ auth.user?.fullName }} 👋</h2>
+    <section class="welcome-band">
+      <div>
+        <p class="eyebrow">{{ $t('pages.dashboard') }}</p>
+        <h2>Bonjour, {{ auth.user?.fullName }} <span aria-hidden="true">👋</span></h2>
+        <p class="welcome-copy">Suivez l'activite de votre boutique scolaire en un coup d'oeil.</p>
+      </div>
+      <router-link to="/invoices/new" class="welcome-action">➕ {{ $t('dashboard.createInvoice') }}</router-link>
+    </section>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">📦</div>
@@ -109,24 +116,32 @@ function statusLabel(status) {
 
 <style scoped>
 .dashboard h2 { margin: 0 0 20px; }
+.welcome-band { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 26px 28px; margin-bottom: 24px; border-radius: 18px; background: linear-gradient(120deg, #075b60, #087f78 58%, #3b9b8f); color: white; box-shadow: 0 14px 30px rgba(7, 91, 96, .2); }
+.welcome-band h2 { margin: 0 0 8px; color: white; font-size: 2rem; }
+.eyebrow { margin: 0 0 8px; color: #bde4df; font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.welcome-copy { margin: 0; color: #d5efeb; }
+.welcome-action { flex-shrink: 0; padding: 12px 16px; border-radius: 10px; background: #f5c86b; color: #173042; text-decoration: none; font-weight: 700; }
+.welcome-action:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,.15); }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .stat-card {
-  background: white; padding: 20px; border-radius: 12px; display: flex; gap: 16px;
-  align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: white; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); display: flex; gap: 16px;
+  align-items: center; box-shadow: var(--shadow);
 }
-.stat-card.highlight { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-.stat-icon { font-size: 2.5rem; }
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 30px rgba(23,48,66,.12); }
+.stat-card.highlight { background: linear-gradient(135deg, #ef765d, #d95d4f); color: white; border-color: transparent; }
+.stat-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: #e7f4f1; font-size: 1.65rem; }
+.highlight .stat-icon { background: rgba(255,255,255,.18); }
 .stat-value { font-size: 1.6rem; font-weight: 700; }
 .stat-label { font-size: 0.85rem; opacity: 0.8; }
 .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .action-card {
-  background: white; padding: 20px; border-radius: 12px; text-decoration: none; color: #1f2937;
+  background: white; padding: 20px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: #1f2937;
   display: flex; align-items: center; gap: 12px; font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.2s;
+  box-shadow: var(--shadow); transition: transform 0.2s;
 }
 .action-card:hover { transform: translateY(-2px); }
 .action-icon { font-size: 1.5rem; }
-.history { margin-top: 24px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.history { margin-top: 24px; background: white; padding: 20px; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); }
 .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .section-head h3 { margin: 0; }
 .section-head a { color: #3b82f6; text-decoration: none; }
@@ -143,5 +158,5 @@ function statusLabel(status) {
 .status.pending { background: #fef3c7; color: #92400e; }
 .status.cancelled { background: #fee2e2; color: #991b1b; }
 .empty { padding: 20px; color: #6b7280; text-align: center; }
-@media (max-width: 640px) { .invoice-row { grid-template-columns: 1fr auto; } .invoice-row .status { grid-column: 1 / -1; justify-self: start; } }
+@media (max-width: 640px) { .welcome-band { align-items: stretch; flex-direction: column; padding: 22px; } .welcome-action { text-align: center; } .invoice-row { grid-template-columns: 1fr auto; } .invoice-row .status { grid-column: 1 / -1; justify-self: start; } }
 </style>
