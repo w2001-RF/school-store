@@ -1,0 +1,38 @@
+
+// Règles Firestore (à coller dans la console Firebase)
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuth() { return request.auth != null; }
+    function isManager() {
+      return isAuth() &&
+        get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'manager';
+    }
+
+    // Profils
+    match /profiles/{uid} {
+      allow read: if isAuth();
+      allow write: if isManager() || request.auth.uid == uid;
+    }
+
+    // Catégories et produits : manager en écriture, lecture pour tous
+    match /categories/{id} { allow read: if isAuth(); allow write: if isManager(); }
+    match /products/{id}   { allow read: if isAuth(); allow write: if isManager(); }
+
+    // Factures
+    match /invoices/{id} {
+      allow read: if isAuth() && (isManager() || resource.data.agent_id == request.auth.uid);
+      allow create: if isAuth() && request.resource.data.agent_id == request.auth.uid;
+      allow update: if isManager() ||
+        (resource.data.agent_id == request.auth.uid && resource.data.status == 'pending');
+      allow delete: if isManager();
+    }
+
+    // Lignes de facture
+    match /invoice_items/{id} {
+      allow read, write: if isAuth() &&
+        (isManager() ||
+         get(/databases/$(database)/documents/invoices/$(resource.data.invoice_id)).data.agent_id == request.auth.uid);
+    }
+  }
+}
