@@ -248,10 +248,10 @@ function clearCart() {
 
 function confirmPayment() {
   invoices.validate({ paid_amount: paidAmount.value })
-    .then(() => {
+    .then(invoice => {
       showPayment.value = false
       alert(`✅ ${t('invoiceCreate.success')}`)
-      router.push('/invoices')
+      router.push({ name: 'invoice-detail', params: { id: invoice.id } })
     })
     .catch(e => alert('❌ ' + e.message))
 }

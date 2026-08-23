@@ -22,6 +22,7 @@
         </label>
         <button type="button" class="icon-action danger" :title="$t('detail.delete')" :aria-label="$t('detail.delete')" @click.prevent="deleteInvoice()">🗑️</button>
       </div>
+      <button class="btn-refresh-detail" type="button" :disabled="refreshing" :title="$t('actions.refresh')" @click="refreshInvoice">↻ {{ $t('actions.refresh') }}</button>
       <table class="items">
         <thead>
           <tr><th>{{ $t('detail.product') }}</th><th>{{ $t('detail.quantity') }}</th><th>{{ $t('detail.unitPrice') }}</th><th>{{ $t('detail.total') }}</th></tr>
@@ -67,7 +68,14 @@ const invoices = useInvoicesStore()
 const auth = useAuthStore()
 const invoice = ref(null)
 const showDeleteConfirmation = ref(false)
+const refreshing = ref(false)
 onMounted(async () => { invoice.value = await invoices.fetchWithItems(route.params.id) })
+
+async function refreshInvoice() {
+  refreshing.value = true
+  try { invoice.value = await invoices.fetchWithItems(route.params.id) }
+  finally { refreshing.value = false }
+}
 
 function printInvoice() {
   if (typeof window === 'undefined' || typeof window.print !== 'function') {
@@ -111,6 +119,8 @@ async function confirmDeleteInvoice() {
 .items th { background: #f9fafb; font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
 .items tfoot td { border-top: 2px solid #1f2937; border-bottom: none; padding-top: 12px; }
 .btn-print { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
+.btn-refresh-detail { margin-bottom: 10px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; cursor: pointer; }
+.btn-refresh-detail:disabled { cursor: wait; opacity: .55; }
 .manager-actions { display: flex; align-items: end; gap: 12px; margin-bottom: 16px; }
 .manager-actions label { display: flex; flex-direction: column; gap: 4px; color: #6b7280; font-size: 0.85rem; }
 .manager-actions select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; color: #1f2937; }
@@ -134,7 +144,7 @@ async function confirmDeleteInvoice() {
   :global(.topbar), :global(.sidebar), :global(.hamburger) { display: none !important; }
   :global(.content) { padding: 0 !important; }
 
-  .btn-back, .manager-actions, .btn-print, .confirmation-backdrop { display: none !important; }
+  .btn-back, .manager-actions, .btn-print, .btn-refresh-detail, .confirmation-backdrop { display: none !important; }
   .invoice-detail {
     width: 80mm;
     max-width: 80mm;

@@ -2,6 +2,7 @@
   <div class="products-view">
     <div class="toolbar">
       <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
+      <button class="btn-secondary refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshProducts">↻ {{ $t('actions.refresh') }}</button>
       <label class="select-all"><input type="checkbox" :checked="allSelected" @change="toggleAll" /> Tout sélectionner</label>
       <button v-if="selectedIds.size" class="bulk-delete" type="button" @click="requestBulkDelete">🗑️ Supprimer ({{ selectedIds.size }})</button>
       <button class="btn-secondary" @click="showBulk = true">📥 {{ $t('common.import') }}</button>
@@ -105,6 +106,10 @@ const productFields = { name: ['name', 'nom'], barcode: ['barcode', 'code_barres
 onMounted(async () => {
   await Promise.all([store.fetchAll(), categoriesStore.fetchAll()])
 })
+
+async function refreshProducts() {
+  await Promise.all([store.fetchAll(), categoriesStore.fetchAll()])
+}
 
 const filtered = computed(() => {
   if (!search.value) return store.items

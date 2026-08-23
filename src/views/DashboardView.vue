@@ -57,7 +57,7 @@
       </router-link>
     </div>
     <section class="history">
-      <div class="section-head"><h3>{{ $t('actions.recent') }}</h3><router-link to="/invoices">{{ $t('actions.viewAll') }}</router-link></div>
+      <div class="section-head"><h3>{{ $t('actions.recent') }}</h3><div class="section-actions"><button type="button" :disabled="loading" :title="$t('actions.refresh')" @click="refreshDashboard">↻ {{ $t('actions.refresh') }}</button><router-link to="/invoices">{{ $t('actions.viewAll') }}</router-link></div></div>
       <div v-if="recentInvoices.length === 0" class="empty">{{ $t('dashboard.noInvoices') }}</div>
       <div v-else class="invoice-list">
         <router-link v-for="invoice in recentInvoices" :key="invoice.id" :to="`/invoices/${invoice.id}`" class="invoice-row">
@@ -81,8 +81,13 @@ const auth = useAuthStore()
 const { t } = useI18n()
 const stats = ref({ products: 0, categories: 0, clients: 0, invoices: 0, pending: 0, totalRevenue: 0 })
 const recentInvoices = ref([])
+const loading = ref(false)
 
-onMounted(async () => {
+onMounted(refreshDashboard)
+
+async function refreshDashboard() {
+  loading.value = true
+  try {
   stats.value.products = await db.count('products')
   stats.value.categories = await db.count('categories')
   stats.value.clients = await db.count('clients')
@@ -93,7 +98,8 @@ onMounted(async () => {
   stats.value.totalRevenue = invoices
     .filter(i => i.status === 'paid')
     .reduce((s, i) => s + Number(i.total_amount), 0)
-})
+  } finally { loading.value = false }
+}
 
 function statusLabel(status) {
   const key = { paid: 'status.paid', pending: 'status.pending', cancelled: 'status.cancelled' }[status]
@@ -124,6 +130,9 @@ function statusLabel(status) {
 .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .section-head h3 { margin: 0; }
 .section-head a { color: #3b82f6; text-decoration: none; }
+.section-actions { display: flex; align-items: center; gap: 12px; }
+.section-actions button { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; cursor: pointer; }
+.section-actions button:disabled { cursor: wait; opacity: .55; }
 .invoice-list { display: grid; gap: 8px; }
 .invoice-row { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center; padding: 12px; color: #1f2937; text-decoration: none; border: 1px solid #e5e7eb; border-radius: 8px; }
 .invoice-row:hover { background: #f9fafb; }

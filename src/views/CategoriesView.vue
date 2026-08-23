@@ -2,6 +2,7 @@
   <div>
     <div class="toolbar">
       <h2>🏷️ {{ $t('categoriesView.title') }}</h2>
+      <button class="btn-secondary refresh-button" type="button" :disabled="refreshing" :title="$t('actions.refresh')" @click="refreshCategories">↻ {{ $t('actions.refresh') }}</button>
       <label class="select-all"><input type="checkbox" :checked="allSelected" @change="toggleAll" /> Tout sélectionner</label>
       <button v-if="selectedIds.size" class="bulk-delete" type="button" @click="requestBulkDelete">🗑️ Supprimer ({{ selectedIds.size }})</button>
       <button class="btn-secondary" @click="showBulk = true">📥 {{ $t('common.import') }}</button>
@@ -61,7 +62,13 @@ const form = ref({})
 const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
 const categoryFields = { name: ['name', 'nom'], description: ['description'] }
+const refreshing = ref(false)
 onMounted(() => store.fetchAll())
+
+async function refreshCategories() {
+  refreshing.value = true
+  try { await store.fetchAll() } finally { refreshing.value = false }
+}
 const categoryItems = computed(() => store.items)
 const { page, pageSize, totalPages, paginated, goToPage, resetPage } = usePagination(categoryItems)
 const allSelected = computed(() => paginated.value.length > 0 && paginated.value.every(category => selectedIds.value.has(category.id)))
@@ -126,6 +133,7 @@ async function createRows(rows, onProgress = () => {}) {
 <style scoped>
 .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
 .toolbar h2 { margin: 0; }
+.refresh-button { white-space: nowrap; }
 .select-all { display: inline-flex; align-items: center; gap: 6px; color: #374151; font-size: .9rem; }
 .bulk-delete { padding: 10px 12px; border: 1px solid #fecaca; border-radius: 6px; background: #fef2f2; color: #b91c1c; cursor: pointer; }
 .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; }

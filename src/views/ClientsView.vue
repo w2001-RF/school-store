@@ -2,6 +2,7 @@
   <div class="clients-view">
     <div class="toolbar">
       <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
+      <button class="btn-secondary refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshClients">↻ {{ $t('actions.refresh') }}</button>
       <button class="btn-secondary" @click="showBulk = true">📥 {{ $t('common.import') }}</button>
       <button class="btn-primary" @click="openForm()">➕ {{ $t('clientsView.new') }}</button>
     </div>
@@ -73,6 +74,10 @@ const pricing = ref({ clientId: '', clientName: '', productId: '', price: 0 })
 const clientFields = { name: ['name', 'nom'], email: ['email', 'e_mail'], phone: ['phone', 'telephone', 'tel'], address: ['address', 'adresse'], notes: ['notes', 'note'], discount_percent: ['discount_percent', 'discount', 'remise'] }
 
 onMounted(() => Promise.all([store.fetchAll(), products.fetchAll()]))
+
+async function refreshClients() {
+  await Promise.all([store.fetchAll(), products.fetchAll()])
+}
 
 const filtered = computed(() => {
   const value = search.value.trim().toLowerCase()

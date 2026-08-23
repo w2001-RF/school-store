@@ -3,6 +3,7 @@
     <h2>📋 {{ $t('invoicesView.title') }}</h2>
     <div class="filters">
       <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('invoicesView.search')}`" />
+      <button class="refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshInvoices">↻ {{ $t('actions.refresh') }}</button>
       <select v-model="statusFilter" @change="resetPage">
         <option value="">{{ $t('common.allStatuses') }}</option>
         <option value="paid">{{ $t('status.paid') }}</option>
@@ -86,6 +87,10 @@ const deleteConfirmation = ref(null)
 
 onMounted(() => store.fetchAll())
 
+async function refreshInvoices() {
+  await store.fetchAll()
+}
+
 const filtered = computed(() => store.items.filter(inv => {
   const matchSearch = !search.value ||
     inv.invoice_number.toLowerCase().includes(search.value.toLowerCase()) ||
@@ -164,6 +169,8 @@ async function confirmDeletion() {
 .icon-action.danger:hover { background: #fef2f2; }
 .status-select { margin-left: 8px; padding: 5px 7px; border: 1px solid #d1d5db; border-radius: 6px; }
 .bulk-delete { padding: 8px 12px; border: 1px solid #fecaca; border-radius: 6px; background: #fef2f2; color: #b91c1c; cursor: pointer; }
+.refresh-button { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; cursor: pointer; white-space: nowrap; }
+.refresh-button:disabled { cursor: wait; opacity: .55; }
 .empty { text-align: center; padding: 40px; color: #6b7280; background: white; border-radius: 8px; }
 .confirmation-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(17, 24, 39, 0.45); }
 .confirmation-dialog { width: min(100%, 420px); padding: 24px; border-radius: 10px; background: white; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); }

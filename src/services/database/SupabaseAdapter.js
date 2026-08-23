@@ -52,7 +52,7 @@ export class SupabaseAdapter extends DatabaseAdapter {
       .from('profiles')
       .select('*')
       .eq('id', authUser.id)
-      .single()
+      .maybeSingle()
     return {
       id: authUser.id,
       email: authUser.email,
@@ -129,8 +129,9 @@ export class SupabaseAdapter extends DatabaseAdapter {
 
   async update(resource, id, data) {
     const { data: updated, error } = await this.client
-      .from(resource).update(data).eq('id', id).select().single()
+      .from(resource).update(data).eq('id', id).select().maybeSingle()
     if (error) throw error
+    if (!updated) throw new Error(`${resource} ${id} introuvable ou non modifiable`)
     return updated
   }
 
