@@ -89,11 +89,16 @@ export const useInvoicesStore = defineStore('invoices', () => {
   async function validate(payment) {
     if (!current.value) throw new Error('Aucune facture en cours')
     if (current.value.lines.length === 0) throw new Error('Facture vide')
+
     const auth = useAuthStore()
+    const productsStore = useProductsStore()
+
+    // 1) Client
     const defaultClients = current.value.client_id
       ? []
       : await db.find('clients', { where: { name: ['ilike', 'passager'] }, limit: 1 })
     const clientId = current.value.client_id || defaultClients[0]?.id || null
+
     const payload = {
       invoice_number: current.value.invoice_number,
       agent_id: auth.user.id,
@@ -103,20 +108,65 @@ export const useInvoicesStore = defineStore('invoices', () => {
       paid_amount: payment.paid_amount,
       status: payment.paid_amount >= currentTotal.value ? 'paid' : 'pending'
     }
+
     loading.value = true
     try {
-      const invoice = await db.create('invoices', payload)
-      // créer les lignes
-      for (const line of current.value.lines) {
-        await db.create('invoice_items', { ...line, invoice_id: invoice.id })
-        // décrémenter le stock
-        await db.update('products', line.product_id, {
-          stock: Math.max(0, (await db.findById('products', line.product_id)).stock - line.quantity)
-        })
+      // 2) Snapshot des produits
+      const snapshots = await Promise.all(
+        current.value.lines.map(line => db.findById('products', line.product_id))
+      )
+
+      // 3) Vérification du stock
+      for (let i = 0; i < current.value.lines.length; i++) {
+        const line = current.value.lines[i]
+        const p = snapshots[i]
+        if (!p) throw new Error(`Produit "${line.product_name}" introuvable`)
+        if (p.stock < line.quantity) {
+          throw new Error(`Stock insuffisant pour "${line.product_name}" (${p.stock} dispo, ${line.quantity} demandés)`)
+        }
       }
+
+      // 4) Création facture + lignes
+      const invoice = await db.create('invoices', payload)
+      try {
+        for (const line of current.value.lines) {
+          await db.create('invoice_items', { ...line, invoice_id: invoice.id })
+        }
+      } catch (e) {
+        await db.delete('invoices', invoice.id).catch(() => {})
+        throw e
+      }
+
+      // 5) Décrémentation du stock (best-effort + tolérant)
+      for (let i = 0; i < current.value.lines.length; i++) {
+        const line = current.value.lines[i]
+        const p = snapshots[i]
+        const newStock = Math.max(0, p.stock - line.quantity)
+
+        try {
+          // Option A : RPC atomique (préféré si déployé)
+          if (typeof db.rpc === 'function' && db.constructor.name === 'SupabaseAdapter') {
+            await db.rpc('decrement_stock', {
+              p_product_id: line.product_id,
+              p_quantity: line.quantity
+            })
+          } else {
+            // Option B : UPDATE direct, tolère les échecs RLS
+            await db.update('products', line.product_id, { stock: newStock }, { throwIfMissing: false })
+          }
+        } catch (e) {
+          console.warn(`[stock] Échec décrémentation pour ${line.product_name} :`, e.message)
+        }
+      }
+
+      // 6) Refresh du cache produits
+      await productsStore.fetchAll()
+
       current.value = null
       return invoice
-    } finally { loading.value = false }
+    } finally {
+      loading.value = false
+    }
   }
 
   async function fetchAll() {

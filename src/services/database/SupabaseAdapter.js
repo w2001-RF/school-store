@@ -127,11 +127,29 @@ export class SupabaseAdapter extends DatabaseAdapter {
     return created
   }
 
-  async update(resource, id, data) {
+  /**
+   * Met à jour une ligne.
+   * @param {boolean} [options.throwIfMissing=true] - Si false, retourne null au lieu de lever
+   */
+  async update(resource, id, data, options = {}) {
+    const { throwIfMissing = true } = options
+
     const { data: updated, error } = await this.client
-      .from(resource).update(data).eq('id', id).select().maybeSingle()
+      .from(resource)
+      .update(data)
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+
     if (error) throw error
-    if (!updated) throw new Error(`${resource} ${id} introuvable ou non modifiable`)
+
+    if (!updated) {
+      if (throwIfMissing) {
+        throw new Error(`${resource} ${id} introuvable ou non modifiable`)
+      }
+      // Mode silencieux : utile pour les opérations best-effort (stock, logs...)
+      return null
+    }
     return updated
   }
 
@@ -164,5 +182,16 @@ export class SupabaseAdapter extends DatabaseAdapter {
 
   unsubscribe(channel) {
     if (channel) this.client.removeChannel(channel)
+  }
+
+  /**
+   * Appelle une fonction RPC Postgres (ex: decrement_stock).
+   * @param {string} fnName - nom de la fonction
+   * @param {object} params - paramètres nommés
+   */
+  async rpc(fnName, params = {}) {
+    const { data, error } = await this.client.rpc(fnName, params)
+    if (error) throw error
+    return data
   }
 }

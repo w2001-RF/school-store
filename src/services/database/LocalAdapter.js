@@ -180,6 +180,8 @@ export class LocalAdapter extends DatabaseAdapter {
     return this._filter(db[resource] || [], filters).length
   }
 
+  async rpc() { throw new Error('RPC non supporté en mode local') }
+
   // ============ Real-time (no-op en local) ============
   subscribe() { return null }
   unsubscribe() { return true }

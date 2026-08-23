@@ -479,4 +479,6 @@ export class SQLiteAdapter extends DatabaseAdapter {
     this._seed()
     await this._saveToFile()
   }
+
+  async rpc() { throw new Error('RPC non supporté en SQLite (utilisez les transactions)') }
 }

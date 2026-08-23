@@ -44,6 +44,9 @@ export class DatabaseAdapter {
   subscribe(_resource, _callback) { throw this._e('subscribe') }
   unsubscribe(_channel) { throw this._e('unsubscribe') }
 
+  // Ajouter dans la classe abstraite :
+  async rpc(_fnName, _params = {}) { throw this._e('rpc') }
+
   _e(method) {
     return new Error(`DatabaseAdapter: méthode "${method}" non implémentée`)
   }

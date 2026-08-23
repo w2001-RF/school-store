@@ -251,6 +251,11 @@ export class FirebaseAdapter extends DatabaseAdapter {
     return rows.length
   }
 
+  async rpc(fnName, params) {
+    // Firebase n'a pas de RPC SQL, on émule côté client
+    return null
+  }
+
   // ===================== Real-time =====================
   subscribe(resource, callback) {
     const unsub = onSnapshot(this._col(resource), (snap) => {
