@@ -10,10 +10,12 @@
       <button class="btn-secondary" @click="start">{{ $t('scanner.retry') }}</button>
     </div>
     <div v-if="scanning || starting" class="scanner-active">
-      <div :id="elementId" class="scanner-video"></div>
-      <div class="scanner-overlay">
-        <div class="scan-line"></div>
-        <div class="scan-corners"></div>
+      <div class="scanner-video-container">
+        <div :id="elementId" class="scanner-video"></div>
+        <div class="scanner-overlay">
+          <div class="scan-line"></div>
+          <div class="scan-corners"></div>
+        </div>
       </div>
       <div class="scanner-actions">
         <button class="btn-secondary" @click="stop">{{ $t('scanner.stop') }}</button>
@@ -109,42 +111,181 @@ function submitManual() {
 </script>
 
 <style scoped>
-.scanner-wrapper { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.scanner-placeholder { text-align: center; padding: 30px 10px; }
-.scanner-icon { font-size: 4rem; margin-bottom: 12px; }
-.scanner-error { text-align: center; padding: 20px; color: #dc2626; }
-.scanner-active { position: relative; width: 100%; }
-.scanner-video { width: 100%; max-width: 500px; aspect-ratio: 4 / 3; margin: 0 auto; border-radius: 8px; overflow: hidden; background: #111827; }
-.scanner-video :deep(video) { display: block; width: 100% !important; height: 100% !important; object-fit: scale-down; }
-.scanner-overlay {
-  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-  width: min(70vw, 250px); aspect-ratio: 1; pointer-events: none;
+.scanner-wrapper {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+.scanner-placeholder {
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.scanner-icon {
+  font-size: 4rem;
+  margin-bottom: 12px;
+}
+
+.scanner-error {
+  text-align: center;
+  padding: 20px;
+  color: #dc2626;
+}
+
+.scanner-active {
+  position: relative;
+  width: 100%;
+}
+
+.scanner-video-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.scanner-video {
+  width: 100%;
+  max-width: 500px;
+  aspect-ratio: 4 / 3;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111827;
+}
+
+.scanner-video :deep(video) {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: scale-down;
+}
+
+.scanner-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(70vw, 250px);
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+
 .scan-corners {
-  position: absolute; inset: 0; border: 3px solid #10b981;
+  position: absolute;
+  inset: 0;
+  border: 3px solid #10b981;
   border-radius: 8px;
 }
+
 .scan-line {
-  position: absolute; left: 0; right: 0; height: 2px; background: #10b981;
-  animation: scan 2s linear infinite; box-shadow: 0 0 8px #10b981;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #10b981;
+  animation: scan 2s linear infinite;
+  box-shadow: 0 0 8px #10b981;
 }
-@keyframes scan { 0%, 100% { top: 0 } 50% { top: 100% } }
-.scanner-actions { display: flex; gap: 10px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
-.manual-entry { display: flex; gap: 8px; margin-top: 12px; }
-.manual-entry input { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; }
-.last-scanned { margin-top: 12px; padding: 10px; background: #d1fae5; border-radius: 6px; text-align: center; }
-.btn-primary, .btn-secondary {
-  padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;
+
+@keyframes scan {
+
+  0%,
+  100% {
+    top: 0
+  }
+
+  50% {
+    top: 100%
+  }
 }
-.btn-primary { background: #3b82f6; color: white; }
-.btn-secondary { background: #e5e7eb; color: #374151; }
+
+.scanner-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.manual-entry {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.manual-entry input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
+
+.last-scanned {
+  margin-top: 12px;
+  padding: 10px;
+  background: #d1fae5;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
 
 @media (max-width: 640px) {
-  .scanner-wrapper { padding: 12px; }
-  .scanner-video { max-width: none; aspect-ratio: 3 / 4; }
-  .scanner-overlay { width: min(68vw, 240px); }
-  .scanner-actions button { flex: 1; min-width: 120px; }
-  .manual-entry { flex-direction: column; }
-  .manual-entry button { width: 100%; }
+  .scanner-wrapper {
+    padding: 12px;
+  }
+
+  .scanner-video {
+    max-width: none;
+    aspect-ratio: 3 / 4;
+  }
+
+  .scanner-overlay {
+    width: min(68vw, 240px);
+  }
+
+  .scanner-actions button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .manual-entry {
+    flex-direction: column;
+  }
+
+  .manual-entry button {
+    width: 100%;
+  }
+
+  .scanner-video :deep(#qr-shaded-region) {
+    border-width: 3px !important;
+    border-color: #10b981 !important;
+    border-radius: 8px !important;
+  }
+
+  .scanner-video :deep(#qr-shaded-region) > div {
+    box-shadow: none !important;
+    border-color: transparent !important;
+  }
 }
 </style>
