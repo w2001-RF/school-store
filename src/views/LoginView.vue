@@ -31,7 +31,7 @@
           <label>{{ $t('login.password') }}</label>
           <input v-model="form.password" type="password" required autocomplete="current-password" />
         </div>
-        <div v-if="auth.error" class="error">{{ auth.error }}</div>
+        <div v-if="auth.error" class="error" aria-live="polite" role="alert">{{ auth.error }}</div>
         <button class="btn-primary" :disabled="auth.loading" type="submit">
           {{ auth.loading ? $t('login.wait') : (mode === 'login' ? $t('login.submitSignIn') : $t('login.submitSignUp')) }}
         </button>

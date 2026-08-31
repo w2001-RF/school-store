@@ -4,24 +4,24 @@
       <span class="logo">📚</span>
       <span><strong class="brand-name">School Store</strong><small>gestion scolaire</small></span>
     </div>
-    <nav class="nav">
+    <nav class="nav" aria-label="Menu principal">
       <router-link to="/dashboard" class="nav-item" @click="$emit('close')">
-        <span>🏠</span> {{ $t('nav.dashboard') }}
+        <span aria-hidden="true">🏠</span> {{ $t('nav.dashboard') }}
       </router-link>
       <router-link v-if="auth.isManager" to="/products" class="nav-item" @click="$emit('close')">
-        <span>📦</span> {{ $t('nav.products') }}
+        <span aria-hidden="true">📦</span> {{ $t('nav.products') }}
       </router-link>
       <router-link v-if="auth.isManager" to="/categories" class="nav-item" @click="$emit('close')">
-        <span>🏷️</span> {{ $t('nav.categories') }}
+        <span aria-hidden="true">🏷️</span> {{ $t('nav.categories') }}
       </router-link>
       <router-link v-if="auth.isManager" to="/clients" class="nav-item" @click="$emit('close')">
-        <span>👥</span> {{ $t('nav.clients') }}
+        <span aria-hidden="true">👥</span> {{ $t('nav.clients') }}
       </router-link>
       <router-link to="/invoices/new" class="nav-item" @click="$emit('close')">
-        <span>🧾</span> {{ $t('nav.newInvoice') }}
+        <span aria-hidden="true">🧾</span> {{ $t('nav.newInvoice') }}
       </router-link>
       <router-link to="/invoices" class="nav-item" @click="$emit('close')">
-        <span>📋</span> {{ $t('nav.invoices') }}
+        <span aria-hidden="true">📋</span> {{ $t('nav.invoices') }}
       </router-link>
     </nav>
   </aside>

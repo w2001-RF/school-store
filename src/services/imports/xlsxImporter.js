@@ -6,6 +6,7 @@ export const xlsxImporter = {
   label: 'Excel',
   extensions: ['.xlsx', '.xls'],
   async parse(file) {
+    if (file.size > 10 * 1024 * 1024) throw new ImportError('Fichier trop volumineux. La taille maximale est de 10 Mo.')
     try {
       const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
       const sheet = workbook.Sheets[workbook.SheetNames[0]]

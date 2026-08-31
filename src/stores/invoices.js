@@ -25,7 +25,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
 
   function generateInvoiceNumber() {
     const d = new Date()
-    return `INV-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*9000+1000)}`
+    return `INV-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${crypto.randomUUID().split('-')[0]}` // Prevent collision
   }
 
   async function addProductByBarcode(barcode) {
@@ -98,6 +98,10 @@ export const useInvoicesStore = defineStore('invoices', () => {
       ? []
       : await db.find('clients', { where: { name: ['ilike', 'passager'] }, limit: 1 })
     const clientId = current.value.client_id || defaultClients[0]?.id || null
+
+    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0 || payment.paid_amount > currentTotal.value) {
+        throw new Error('Le montant payé est invalide.')
+    }
 
     const payload = {
       invoice_number: current.value.invoice_number,

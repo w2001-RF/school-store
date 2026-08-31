@@ -183,14 +183,17 @@ CREATE POLICY "Agents create invoices" ON invoices
     auth.role() = 'authenticated' AND
     agent_id = auth.uid()
   );
-CREATE POLICY "Agents update own pending invoices" ON invoices
+CREATE POLICY "Agents update own invoices" ON invoices
   FOR UPDATE USING (
-    agent_id = auth.uid() AND status = 'pending'
+    agent_id = auth.uid()
   );
 CREATE POLICY "Managers can update any invoice" ON invoices
   FOR UPDATE USING (public.current_user_role() = 'manager');
 CREATE POLICY "Managers can delete invoices" ON invoices
   FOR DELETE USING (public.current_user_role() = 'manager');
+
+CREATE INDEX IF NOT EXISTS invoices_client_id_idx ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS invoices_created_at_idx ON invoices(created_at);
 
 -- Lignes de facture
 CREATE POLICY "Access invoice items via parent" ON invoice_items
@@ -204,3 +207,5 @@ CREATE POLICY "Access invoice items via parent" ON invoice_items
       )
     )
   );
+
+ALTER TABLE invoices ADD CONSTRAINT chk_paid_amount CHECK (paid_amount >= 0 AND paid_amount <= total_amount);

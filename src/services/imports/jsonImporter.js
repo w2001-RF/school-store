@@ -5,6 +5,7 @@ export const jsonImporter = {
   label: 'JSON',
   extensions: ['.json'],
   async parse(file) {
+    if (file.size > 10 * 1024 * 1024) throw new ImportError('Fichier trop volumineux. La taille maximale est de 10 Mo.')
     let value
     try { value = JSON.parse(await file.text()) } catch { throw new ImportError('JSON invalide') }
     const rows = Array.isArray(value) ? value : value.data || value.rows

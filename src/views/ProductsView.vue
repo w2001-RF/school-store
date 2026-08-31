@@ -38,7 +38,7 @@
           <label>{{ $t('common.name') }} *</label>
           <input v-model="form.name" required />
         </div>
-        <div class="form-group">
+        <div class="form-group" aria-live="polite">
           <label>{{ $t('common.barcode') }} *</label>
           <input v-model="form.barcode" required />
         </div>
