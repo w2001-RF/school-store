@@ -1,7 +1,10 @@
 <template>
   <div class="products-view">
     <div class="toolbar">
-      <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
+      <div class="search-container">
+        <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
+        <button class="btn-icon camera-btn" @click="showScanner = true" title="Scanner un code-barres">📷</button>
+      </div>
       <button class="btn-secondary refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshProducts">↻ {{ $t('actions.refresh') }}</button>
       <label class="select-all"><input type="checkbox" :checked="allSelected" @change="toggleAll" /> Tout sélectionner</label>
       <button v-if="selectedIds.size" class="bulk-delete" type="button" @click="requestBulkDelete">🗑️ Supprimer ({{ selectedIds.size }})</button>
@@ -79,6 +82,9 @@
         <button type="button" class="btn-danger" @click="confirmBulkDelete">Supprimer</button>
       </div>
     </Modal>
+    <Modal v-if="showScanner" title="Scanner un produit" @close="showScanner = false">
+      <BarcodeScanner @scan="handleScan" />
+    </Modal>
   </div>
 </template>
 
@@ -91,6 +97,7 @@ import { formatMoney } from '../utils/format.js'
 import Modal from '../components/common/Modal.vue'
 import BulkImportModal from '../components/common/BulkImportModal.vue'
 import Pagination from '../components/common/Pagination.vue'
+import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
 import { usePagination } from '../composables/usePagination.js'
 
 const store = useProductsStore()
@@ -98,6 +105,7 @@ const categoriesStore = useCategoriesStore()
 const search = ref('')
 const showForm = ref(false)
 const showBulk = ref(false)
+const showScanner = ref(false)
 const form = ref({})
 const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
@@ -138,6 +146,12 @@ function toggleAll() {
   if (allSelected.value) paginated.value.forEach(product => next.delete(product.id))
   else paginated.value.forEach(product => next.add(product.id))
   selectedIds.value = next
+}
+
+function handleScan(code) {
+  search.value = code
+  showScanner.value = false
+  resetPage()
 }
 
 function requestBulkDelete() {
@@ -213,8 +227,13 @@ async function confirmDelete(p) {
 </script>
 
 <style scoped>
-.toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.search { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; }
+.toolbar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.search-container { display: flex; align-items: center; flex: 1 1 240px; min-width: 200px; position: relative; }
+.search { width: 100%; padding: 10px 44px 10px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.95rem; box-sizing: border-box; transition: border-color .15s, box-shadow .15s; }
+.search:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, .15); }
+.camera-btn { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #eff6ff; border: none; border-radius: 8px; font-size: 1.1rem; line-height: 1; cursor: pointer; padding: 0; }
+.camera-btn:hover { background: #dbeafe; }
+.camera-btn:active { transform: translateY(-50%) scale(0.94); }
 .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: 500; }
 .btn-secondary { background: #e5e7eb; color: #374151; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
 .select-all { display: inline-flex; align-items: center; gap: 6px; color: #374151; font-size: .9rem; }
@@ -247,4 +266,12 @@ async function confirmDelete(p) {
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
+
+@media (max-width: 640px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .search-container { order: -1; width: 100%; }
+  .search { font-size: 16px; } /* 16px avoids iOS auto-zoom on focus */
+  .toolbar > .btn-primary, .toolbar > .btn-secondary, .toolbar > .bulk-delete { width: 100%; text-align: center; }
+  .select-all { justify-content: center; }
+}
 </style>
