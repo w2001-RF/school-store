@@ -20,7 +20,7 @@
         <div class="actions">
           <button class="icon-button" title="Modifier le client" :aria-label="`Modifier ${client.name}`" @click="openForm(client)">✏️</button>
           <button class="icon-button" title="Gérer les tarifs produits" :aria-label="`Gérer les tarifs de ${client.name}`" @click="openPricing(client)">💶</button>
-          <button class="icon-button danger" title="Supprimer le client" :aria-label="`Supprimer ${client.name}`" @click="removeClient(client)">🗑️</button>
+          <button class="icon-button danger" title="Supprimer le client" :aria-label="`Supprimer ${client.name}`" @click="requestRemove(client)">🗑️</button>
         </div>
       </article>
     </div>
@@ -31,11 +31,12 @@
         <div class="form-group"><label>{{ $t('common.name') }} *</label><input v-model="form.name" required /></div>
         <div class="form-row">
           <div class="form-group"><label>{{ $t('common.email') }}</label><input v-model="form.email" type="email" /></div>
-          <div class="form-group"><label>{{ $t('common.phone') }}</label><input v-model="form.phone" /></div>
+          <div class="form-group"><label>{{ $t('common.phone') }}</label><input v-model="form.phone" type="tel" pattern="[0-9+ .()-]{6,20}" title="Numéro de téléphone valide (6 à 20 chiffres, espaces ou +()-)" /></div>
         </div>
         <div class="form-group"><label>{{ $t('common.address') }}</label><input v-model="form.address" /></div>
         <div class="form-group"><label>{{ $t('clientsView.discount') }}</label><input v-model.number="form.discount_percent" type="number" min="0" max="100" step="0.01" /></div>
         <div class="form-group"><label>{{ $t('common.notes') }}</label><textarea v-model="form.notes" rows="2"></textarea></div>
+        <div v-if="formError" class="error" aria-live="polite" role="alert">{{ formError }}</div>
         <div class="form-actions"><button type="button" class="btn-secondary" @click="showForm = false">{{ $t('common.cancel') }}</button><button class="btn-primary">{{ $t('common.save') }}</button></div>
       </form>
     </Modal>
@@ -50,6 +51,14 @@
     </Modal>
 
     <BulkImportModal v-if="showBulk" :title="$t('clientsView.importing')" :field-map="clientFields" :create-rows="createRows" @close="showBulk = false" />
+
+    <Modal v-if="deleteTarget" title="Supprimer le client" @close="deleteTarget = null">
+      <p>Supprimer « {{ deleteTarget.name }} » ? Cette action est définitive.</p>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" @click="deleteTarget = null">Annuler</button>
+        <button type="button" class="btn-danger" @click="confirmRemove">Supprimer</button>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -71,6 +80,8 @@ const showBulk = ref(false)
 const form = ref({})
 const showPricing = ref(false)
 const pricing = ref({ clientId: '', clientName: '', productId: '', price: 0 })
+const formError = ref('')
+const deleteTarget = ref(null)
 const clientFields = { name: ['name', 'nom'], email: ['email', 'e_mail'], phone: ['phone', 'telephone', 'tel'], address: ['address', 'adresse'], notes: ['notes', 'note'], discount_percent: ['discount_percent', 'discount', 'remise'] }
 
 onMounted(() => Promise.all([store.fetchAll(), products.fetchAll()]))
@@ -93,15 +104,17 @@ function changePageSize(size) {
 
 function openForm(client = null) {
   form.value = client ? { ...client } : { name: '', email: '', phone: '', address: '', notes: '', discount_percent: 0 }
+  formError.value = ''
   showForm.value = true
 }
 
 async function save() {
+  formError.value = ''
   try {
     if (form.value.id) await store.update(form.value.id, form.value)
     else await store.create(form.value)
     showForm.value = false
-  } catch (error) { alert(error.message) }
+  } catch (error) { formError.value = error.message }
 }
 
 async function createRows(rows, onProgress = () => {}) {
@@ -128,8 +141,13 @@ async function savePricing() {
   } catch (error) { alert(error.message) }
 }
 
-async function removeClient(client) {
-  if (confirm(`Supprimer "${client.name}" ?`)) await store.remove(client.id)
+function requestRemove(client) {
+  deleteTarget.value = client
+}
+
+async function confirmRemove() {
+  await store.remove(deleteTarget.value.id)
+  deleteTarget.value = null
 }
 </script>
 
@@ -155,5 +173,7 @@ async function removeClient(client) {
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .hint { color: #6b7280; font-size: .9rem; }
+.error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
+.btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
 @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; gap: 0; } }
 </style>

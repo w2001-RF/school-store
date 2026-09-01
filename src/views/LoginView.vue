@@ -29,7 +29,7 @@
         </div>
         <div class="form-group">
           <label>{{ $t('login.password') }}</label>
-          <input v-model="form.password" type="password" required autocomplete="current-password" />
+          <input v-model="form.password" type="password" required autocomplete="current-password" :minlength="mode === 'signup' ? 6 : undefined" />
         </div>
         <div v-if="auth.error" class="error" aria-live="polite" role="alert">{{ auth.error }}</div>
         <button class="btn-primary" :disabled="auth.loading" type="submit">

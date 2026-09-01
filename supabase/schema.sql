@@ -208,4 +208,4 @@ CREATE POLICY "Access invoice items via parent" ON invoice_items
     )
   );
 
-ALTER TABLE invoices ADD CONSTRAINT chk_paid_amount CHECK (paid_amount >= 0 AND paid_amount <= total_amount);
+ALTER TABLE invoices ADD CONSTRAINT chk_paid_amount CHECK (paid_amount >= 0 AND paid_amount >= total_amount);

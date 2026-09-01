@@ -9,7 +9,7 @@
       <p class="hint">{{ $t('common.importHint') }}</p>
       <textarea v-model="manualText" rows="7" :placeholder="$t('bulkImport.paste')"></textarea>
       <p v-if="fileName" class="file-name">{{ fileName }}</p>
-      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="error" class="error" aria-live="polite" role="alert">{{ error }}</p>
       <div v-if="loading" class="loading-state" role="status" aria-live="polite">
         <span>{{ $t('common.loading') }}</span>
         <div class="loading-bar"><span></span></div>
@@ -73,7 +73,22 @@ watch(manualText, async value => {
 })
 
 async function readFile(event) {
-  file.value = event.target.files?.[0] || null
+  const selected = event.target.files?.[0] || null
+  if (selected) {
+    const extension = '.' + selected.name.split('.').pop().toLowerCase()
+    const isAllowedExtension = importers.some(importer => importer.extensions.includes(extension))
+    if (!isAllowedExtension) {
+      error.value = `Format de fichier non supporté. Formats acceptés : ${acceptedExtensions.value}`
+      event.target.value = ''
+      return
+    }
+    if (selected.size > 10 * 1024 * 1024) {
+      error.value = 'Fichier trop volumineux. La taille maximale est de 10 Mo.'
+      event.target.value = ''
+      return
+    }
+  }
+  file.value = selected
   fileName.value = file.value?.name || ''
   manualText.value = ''
   if (file.value) await parseFile(file.value)

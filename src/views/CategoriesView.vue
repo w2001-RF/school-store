@@ -15,7 +15,7 @@
         <p v-if="c.description">{{ c.description }}</p>
         <div class="actions">
           <button @click="openForm(c)">✏️</button>
-          <button @click="remove(c)" class="danger">🗑️</button>
+          <button @click="requestRemove(c)" class="danger">🗑️</button>
         </div>
       </div>
     </div>
@@ -30,6 +30,7 @@
           <label>{{ $t('common.description') }}</label>
           <textarea v-model="form.description" rows="2"></textarea>
         </div>
+        <div v-if="formError" class="error" aria-live="polite" role="alert">{{ formError }}</div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="showForm = false">{{ $t('common.cancel') }}</button>
           <button type="submit" class="btn-primary">{{ $t('common.save') }}</button>
@@ -42,6 +43,13 @@
       <div class="form-actions">
         <button type="button" class="btn-secondary" @click="deleteConfirmation = false">Annuler</button>
         <button type="button" class="btn-danger" @click="confirmBulkDelete">Supprimer</button>
+      </div>
+    </Modal>
+    <Modal v-if="deleteTarget" title="Supprimer la catégorie" @close="deleteTarget = null">
+      <p>Supprimer « {{ deleteTarget.name }} » ? Cette action est définitive.</p>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" @click="deleteTarget = null">Annuler</button>
+        <button type="button" class="btn-danger" @click="confirmRemove">Supprimer</button>
       </div>
     </Modal>
   </div>
@@ -61,6 +69,8 @@ const showBulk = ref(false)
 const form = ref({})
 const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
+const deleteTarget = ref(null)
+const formError = ref('')
 const categoryFields = { name: ['name', 'nom'], description: ['description'] }
 const refreshing = ref(false)
 onMounted(() => store.fetchAll())
@@ -107,17 +117,25 @@ async function confirmBulkDelete() {
 
 function openForm(c = null) {
   form.value = c ? { ...c } : { name: '', description: '' }
+  formError.value = ''
   showForm.value = true
 }
 async function save() {
+  formError.value = ''
   try {
     if (form.value.id) await store.update(form.value.id, form.value)
     else await store.create(form.value)
     showForm.value = false
-  } catch (e) { alert(e.message) }
+  } catch (e) { formError.value = e.message }
 }
-async function remove(c) {
-  if (confirm(`Supprimer "${c.name}" ?`)) await store.remove(c.id)
+
+function requestRemove(c) {
+  deleteTarget.value = c
+}
+
+async function confirmRemove() {
+  await store.remove(deleteTarget.value.id)
+  deleteTarget.value = null
 }
 
 async function createRows(rows, onProgress = () => {}) {
@@ -153,4 +171,5 @@ async function createRows(rows, onProgress = () => {}) {
 .form-group input, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
+.error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
 </style>
