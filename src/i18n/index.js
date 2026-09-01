@@ -4,6 +4,9 @@ const messages = {
   fr: {
     bulkImport: { chooseFile: 'Choisir un fichier', formats: 'Formats : CSV, JSON, Excel, SQL/Dump, Access (.mdb/.accdb)', paste: 'Collez ici un CSV ou un JSON', preview: 'Aperçu : {count} ligne(s)', importing: 'Importation...', importRows: 'Importer {count} ligne(s)' },
     language: 'Langue',
+    brand: { name: 'School Store', tagline: 'gestion scolaire' },
+    theme: { label: 'Apparence', system: 'Système', light: 'Clair', dark: 'Sombre' },
+    layout: { openMenu: 'Ouvrir le menu', closeMenu: 'Fermer le menu' },
     languages: { fr: 'Français', en: 'English', es: 'Español', ar: 'العربية' },
     nav: { dashboard: 'Tableau de bord', products: 'Produits', categories: 'Catégories', clients: 'Clients', newInvoice: 'Nouvelle facture', invoices: 'Factures' },
     pages: { dashboard: 'Tableau de bord', products: 'Gestion des produits', categories: 'Gestion des catégories', clients: 'Gestion des clients', newInvoice: 'Nouvelle facture', invoices: 'Historique des factures', detail: 'Détail de la facture' },
@@ -23,6 +26,9 @@ const messages = {
   en: {
     bulkImport: { chooseFile: 'Choose a file', formats: 'Formats: CSV, JSON, Excel, SQL/Dump, Access (.mdb/.accdb)', paste: 'Paste CSV or JSON here', preview: 'Preview: {count} row(s)', importing: 'Importing...', importRows: 'Import {count} row(s)' },
     language: 'Language',
+    brand: { name: 'School Store', tagline: 'school management' },
+    theme: { label: 'Appearance', system: 'System', light: 'Light', dark: 'Dark' },
+    layout: { openMenu: 'Open menu', closeMenu: 'Close menu' },
     languages: { fr: 'Français', en: 'English', es: 'Español', ar: 'العربية' },
     nav: { dashboard: 'Dashboard', products: 'Products', categories: 'Categories', clients: 'Clients', newInvoice: 'New invoice', invoices: 'Invoices' },
     pages: { dashboard: 'Dashboard', products: 'Product management', categories: 'Category management', clients: 'Client management', newInvoice: 'New invoice', invoices: 'Invoice history', detail: 'Invoice details' },
@@ -42,6 +48,9 @@ const messages = {
   es: {
     bulkImport: { chooseFile: 'Elegir un archivo', formats: 'Formatos: CSV, JSON, Excel, SQL/Dump, Access (.mdb/.accdb)', paste: 'Pega aquí un CSV o JSON', preview: 'Vista previa: {count} fila(s)', importing: 'Importando...', importRows: 'Importar {count} fila(s)' },
     language: 'Idioma',
+    brand: { name: 'School Store', tagline: 'gestión escolar' },
+    theme: { label: 'Apariencia', system: 'Sistema', light: 'Claro', dark: 'Oscuro' },
+    layout: { openMenu: 'Abrir menú', closeMenu: 'Cerrar menú' },
     languages: { fr: 'Français', en: 'English', es: 'Español', ar: 'العربية' },
     nav: { dashboard: 'Panel', products: 'Productos', categories: 'Categorías', clients: 'Clientes', newInvoice: 'Nueva factura', invoices: 'Facturas' },
     pages: { dashboard: 'Panel', products: 'Gestión de productos', categories: 'Gestión de categorías', clients: 'Gestión de clientes', newInvoice: 'Nueva factura', invoices: 'Historial de facturas', detail: 'Detalle de factura' },
@@ -61,6 +70,9 @@ const messages = {
   ar: {
     bulkImport: { chooseFile: 'اختيار ملف', formats: 'الصيغ: CSV وJSON وExcel وSQL/Dump وAccess (.mdb/.accdb)', paste: 'ألصق CSV أو JSON هنا', preview: 'معاينة: {count} صف', importing: 'جار الاستيراد...', importRows: 'استيراد {count} صف' },
     language: 'اللغة',
+    brand: { name: 'School Store', tagline: 'إدارة مدرسية' },
+    theme: { label: 'المظهر', system: 'النظام', light: 'فاتح', dark: 'داكن' },
+    layout: { openMenu: 'فتح القائمة', closeMenu: 'إغلاق القائمة' },
     languages: { fr: 'Français', en: 'English', es: 'Español', ar: 'العربية' },
     nav: { dashboard: 'لوحة التحكم', products: 'المنتجات', categories: 'الفئات', clients: 'العملاء', newInvoice: 'فاتورة جديدة', invoices: 'الفواتير' },
     pages: { dashboard: 'لوحة التحكم', products: 'إدارة المنتجات', categories: 'إدارة الفئات', clients: 'إدارة العملاء', newInvoice: 'فاتورة جديدة', invoices: 'سجل الفواتير', detail: 'تفاصيل الفاتورة' },

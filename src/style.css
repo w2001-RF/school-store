@@ -12,6 +12,21 @@
   --gold: #e7b34b;
   --shadow: 0 12px 30px rgba(23, 48, 66, .08);
   --radius: 14px;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --ink: #edf4f2;
+  --muted: #aebfba;
+  --paper: #101817;
+  --surface: #172321;
+  --line: #304440;
+  --teal: #42b9af;
+  --teal-dark: #0c403e;
+  --coral: #ff9b82;
+  --gold: #f4c96a;
+  --shadow: 0 14px 32px rgba(0, 0, 0, .32);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -20,6 +35,26 @@ body {
   background: var(--paper); color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea { background: var(--surface); border-color: var(--line); color: var(--ink); }
+:root[data-theme='dark'] .topbar,
+:root[data-theme='dark'] .invoice-card,
+:root[data-theme='dark'] .invoice-detail,
+:root[data-theme='dark'] .product-card,
+:root[data-theme='dark'] .invoice-item-row,
+:root[data-theme='dark'] .scanner-wrapper,
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .confirmation-dialog { background: var(--surface) !important; color: var(--ink); }
+:root[data-theme='dark'] .items th { background: #20302d !important; color: var(--muted); }
+:root[data-theme='dark'] .items th,
+:root[data-theme='dark'] .items td,
+:root[data-theme='dark'] .modal-head,
+:root[data-theme='dark'] .payment-history,
+:root[data-theme='dark'] .payment-history li { border-color: var(--line) !important; }
+:root[data-theme='dark'] .btn-secondary,
+:root[data-theme='dark'] .btn-icon,
+:root[data-theme='dark'] .quick-amounts button { background: #263835 !important; color: var(--ink) !important; border-color: var(--line) !important; }
 input, button, select, textarea { font-family: inherit; }
 button, a { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, opacity .18s ease; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(239, 118, 93, .35); outline-offset: 2px; }
