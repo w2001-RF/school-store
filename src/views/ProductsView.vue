@@ -3,7 +3,7 @@
     <div class="toolbar">
       <div class="search-container">
         <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
-        <button class="btn-icon camera-btn" @click="openSearchScanner" title="Scanner un code-barres">📷</button>
+        <button class="btn-icon camera-btn" @click="openSearchScanner" :title="$t('productsView.scanBarcode')" :aria-label="$t('productsView.scanBarcode')">📷</button>
       </div>
       <button class="btn-secondary refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshProducts">↻ {{ $t('actions.refresh') }}</button>
       <label class="select-all"><input type="checkbox" :checked="allSelected" @change="toggleAll" /> Tout sélectionner</label>
@@ -42,9 +42,9 @@
           <label>{{ $t('common.barcode') }} *</label>
           <div class="barcode-field">
             <input v-model="form.barcode" required />
-            <button type="button" class="btn-icon scan-form-barcode" title="Scanner le code-barres" aria-label="Scanner le code-barres" @click="openFormScanner">📷</button>
+            <button type="button" class="btn-icon scan-form-barcode" :title="$t('productsView.scanBarcode')" :aria-label="$t('productsView.scanBarcode')" @click="openFormScanner">📷</button>
           </div>
-          <small class="field-hint">Scannez le code avec la camera ou saisissez-le manuellement.</small>
+          <small class="field-hint">{{ $t('productsView.barcodeHint') }}</small>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -94,7 +94,7 @@
         <button type="button" class="btn-danger" @click="confirmDelete">Supprimer</button>
       </div>
     </Modal>
-    <Modal v-if="showScanner" :title="scannerTarget === 'form' ? 'Scanner le code-barres' : 'Scanner un produit'" @close="showScanner = false">
+    <Modal v-if="showScanner" :title="scannerTarget === 'form' ? $t('productsView.scanBarcode') : $t('productsView.scanProduct')" @close="showScanner = false">
       <BarcodeScanner @scan="handleScan" />
     </Modal>
   </div>
@@ -112,9 +112,11 @@ import Pagination from '../components/common/Pagination.vue'
 import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
 import { usePagination } from '../composables/usePagination.js'
 import { useDebouncedRef } from '../composables/useDebounce.js'
+import { useI18n } from 'vue-i18n'
 
 const store = useProductsStore()
 const categoriesStore = useCategoriesStore()
+const { t } = useI18n()
 const search = ref('')
 const debouncedSearch = useDebouncedRef(search, 300)
 const showForm = ref(false)
@@ -170,7 +172,7 @@ function handleScan(code) {
     form.value.barcode = code
     const existingProduct = store.items.find(product => product.barcode === code && product.id !== form.value.id)
     formError.value = existingProduct
-      ? `Ce code-barres est deja associe au produit « ${existingProduct.name} ».`
+      ? t('productsView.duplicateBarcode', { name: existingProduct.name })
       : ''
     showScanner.value = false
     return

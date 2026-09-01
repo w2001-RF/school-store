@@ -1,9 +1,9 @@
 <template>
   <section class="pos-summary">
-    <div class="summary-row"><span>Sous-total</span><span>{{ formatMoney(subtotal) }}</span></div>
-    <div v-if="discountAmount > 0" class="summary-row discount"><span>Remise</span><span>-{{ formatMoney(discountAmount) }}</span></div>
-    <div class="summary-row total"><span>Total</span><span>{{ formatMoney(totalAmount) }}</span></div>
-    <button type="button" class="pay" :disabled="!hasItems" @click="$emit('pay')">Proceder au paiement</button>
+    <div class="summary-row"><span>{{ $t('pos.subtotal') }}</span><span>{{ formatMoney(subtotal) }}</span></div>
+    <div v-if="discountAmount > 0" class="summary-row discount"><span>{{ $t('pos.discount') }}</span><span>-{{ formatMoney(discountAmount) }}</span></div>
+    <div class="summary-row total"><span>{{ $t('pos.total') }}</span><span>{{ formatMoney(totalAmount) }}</span></div>
+    <button type="button" class="pay" :disabled="!hasItems" @click="$emit('pay')">{{ $t('pos.proceedPayment') }}</button>
   </section>
 </template>
 

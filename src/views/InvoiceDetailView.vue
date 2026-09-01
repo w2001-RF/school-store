@@ -36,16 +36,16 @@
           </tr>
         </tbody>
         <tfoot>
-          <tr><td colspan="3">Sous-total</td><td>{{ formatMoney(subtotalAmount) }}</td></tr>
-          <tr v-if="discountAmount > 0"><td colspan="3">Remise</td><td>-{{ formatMoney(discountAmount) }}</td></tr>
-          <tr><td colspan="3"><strong>TOTAL</strong></td><td><strong>{{ formatMoney(invoice.total_amount) }}</strong></td></tr>
+          <tr><td colspan="3">{{ $t('detail.subtotal') }}</td><td>{{ formatMoney(subtotalAmount) }}</td></tr>
+          <tr v-if="discountAmount > 0"><td colspan="3">{{ $t('detail.discount') }}</td><td>-{{ formatMoney(discountAmount) }}</td></tr>
+          <tr><td colspan="3"><strong>{{ $t('detail.total') }}</strong></td><td><strong>{{ formatMoney(invoice.total_amount) }}</strong></td></tr>
           <tr><td colspan="3">{{ $t('detail.paid') }}</td><td>{{ formatMoney(invoice.paid_amount) }}</td></tr>
-          <tr v-if="remainingAmount > 0"><td colspan="3">Reste a payer</td><td>{{ formatMoney(remainingAmount) }}</td></tr>
+          <tr v-if="remainingAmount > 0"><td colspan="3">{{ $t('detail.remaining') }}</td><td>{{ formatMoney(remainingAmount) }}</td></tr>
         </tfoot>
       </table>
       <section class="payment-history">
-        <h3>Historique des paiements</h3>
-        <p v-if="!invoice.payments?.length" class="empty-payments">Aucun paiement enregistre.</p>
+        <h3>{{ $t('detail.paymentHistory') }}</h3>
+        <p v-if="!invoice.payments?.length" class="empty-payments">{{ $t('detail.noPayments') }}</p>
         <ul v-else>
           <li v-for="payment in invoice.payments" :key="payment.id">
             <span>{{ paymentMethodLabel(payment.method) }} - {{ formatDate(payment.paid_at || payment.created_at) }}</span>
@@ -74,11 +74,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useInvoicesStore } from '../stores/invoices.js'
 import { useAuthStore } from '../stores/auth.js'
 import { formatMoney, formatDate } from '../utils/format.js'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
 const invoices = useInvoicesStore()
 const auth = useAuthStore()
+const { t } = useI18n()
 const invoice = ref(null)
 const showDeleteConfirmation = ref(false)
 const refreshing = ref(false)
@@ -120,7 +122,8 @@ async function confirmDeleteInvoice() {
 }
 
 function paymentMethodLabel(method) {
-  return ({ cash: 'Especes', card: 'Carte', transfer: 'Virement', other: 'Autre' })[method] || method
+  const key = { cash: 'pos.cash', card: 'pos.card', transfer: 'pos.transfer', other: 'pos.other' }[method]
+  return key ? t(key) : method
 }
 </script>
 

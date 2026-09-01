@@ -1,39 +1,39 @@
 <template>
-  <Modal title="Paiement" @close="$emit('close')">
+  <Modal :title="$t('invoiceCreate.payment')" @close="$emit('close')">
     <form class="payment-dialog" @submit.prevent="submit">
       <div class="total-display">{{ formatMoney(totalAmount) }}</div>
 
       <label class="field">
-        Montant recu
+        {{ $t('pos.amountReceived') }}
         <input v-model.number="paidAmount" type="number" min="0" step="0.01" autofocus />
       </label>
 
       <label class="field">
-        Mode de paiement
+        {{ $t('pos.paymentMethod') }}
         <select v-model="paymentMethod">
-          <option value="cash">Especes</option>
-          <option value="card">Carte</option>
-          <option value="transfer">Virement</option>
+          <option value="cash">{{ $t('pos.cash') }}</option>
+          <option value="card">{{ $t('pos.card') }}</option>
+          <option value="transfer">{{ $t('pos.transfer') }}</option>
         </select>
       </label>
 
       <label class="field">
-        Remise (%)
+        {{ $t('pos.discountPercent') }}
         <input v-model.number="discountPercent" type="number" min="0" max="100" step="0.01" />
       </label>
 
-      <p v-if="changeDue > 0" class="change">Monnaie a rendre: <strong>{{ formatMoney(changeDue) }}</strong></p>
-      <p v-else-if="remaining > 0" class="remaining">Reste a payer: <strong>{{ formatMoney(remaining) }}</strong></p>
+      <p v-if="changeDue > 0" class="change">{{ $t('pos.changeDue') }}: <strong>{{ formatMoney(changeDue) }}</strong></p>
+      <p v-else-if="remaining > 0" class="remaining">{{ $t('invoiceCreate.remaining') }}: <strong>{{ formatMoney(remaining) }}</strong></p>
 
-      <div class="quick-amounts" aria-label="Montants rapides">
+      <div class="quick-amounts" :aria-label="$t('pos.quickAmounts')">
         <button v-for="amount in quickAmounts" :key="amount" type="button" @click="paidAmount = amount">
           {{ formatMoney(amount) }}
         </button>
       </div>
 
       <div class="actions">
-        <button type="button" class="secondary" @click="$emit('close')">Annuler</button>
-        <button type="submit" class="primary" :disabled="!isPaymentValid">Valider</button>
+        <button type="button" class="secondary" @click="$emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="submit" class="primary" :disabled="!isPaymentValid">{{ $t('invoiceCreate.validate') }}</button>
       </div>
     </form>
   </Modal>

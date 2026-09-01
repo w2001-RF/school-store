@@ -6,19 +6,19 @@
         <div class="line-meta">
           <span v-if="line.product_barcode" class="barcode">📊 {{ line.product_barcode }}</span>
           <span class="stock-hint" v-if="maxStock != null">
-            Stock : {{ maxStock }}
+            {{ $t('pos.stock', { stock: maxStock }) }}
           </span>
         </div>
       </div>
 
       <div class="line-controls">
         <!-- Contrôle quantité -->
-        <div class="qty-control" role="group" :aria-label="`Quantité de ${line.product_name}`">
+        <div class="qty-control" role="group" :aria-label="$t('pos.quantityOf', { name: line.product_name })">
           <button
             class="qty-btn"
             :disabled="line.quantity <= 1"
             @click="decrement"
-            aria-label="Diminuer la quantité"
+            :aria-label="$t('pos.decreaseQuantity')"
           >−</button>
           <input
             type="number"
@@ -34,13 +34,13 @@
             class="qty-btn"
             :disabled="maxStock != null && line.quantity >= maxStock"
             @click="increment"
-            aria-label="Augmenter la quantité"
+            :aria-label="$t('pos.increaseQuantity')"
           >+</button>
         </div>
 
         <!-- Contrôle prix unitaire -->
         <div class="price-control">
-          <label class="price-label">Prix unit.</label>
+          <label class="price-label">{{ $t('pos.unitPrice') }}</label>
           <input
             type="number"
             class="price-input"
@@ -56,7 +56,7 @@
 
         <!-- Total de la ligne -->
         <div class="line-total">
-          <div class="total-label">Total</div>
+          <div class="total-label">{{ $t('pos.lineTotal') }}</div>
           <div class="total-value">{{ formatMoney(line.total_price) }}</div>
         </div>
 
@@ -65,8 +65,8 @@
           v-if="removable"
           class="btn-remove"
           @click="$emit('remove')"
-          :aria-label="`Retirer ${line.product_name}`"
-          title="Retirer de la facture"
+          :aria-label="$t('pos.removeFromInvoice', { name: line.product_name })"
+          :title="$t('pos.removeFromInvoiceTitle')"
         >
           🗑️
         </button>
