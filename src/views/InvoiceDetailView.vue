@@ -36,10 +36,23 @@
           </tr>
         </tbody>
         <tfoot>
-          <tr><td colspan="3"><strong>TOTAL</strong></td><td><strong>{{ formatMoney(invoice.total_amount) }}</strong></td></tr>
+          <tr><td colspan="3">{{ $t('detail.subtotal') }}</td><td>{{ formatMoney(subtotalAmount) }}</td></tr>
+          <tr v-if="discountAmount > 0"><td colspan="3">{{ $t('detail.discount') }}</td><td>-{{ formatMoney(discountAmount) }}</td></tr>
+          <tr><td colspan="3"><strong>{{ $t('detail.total') }}</strong></td><td><strong>{{ formatMoney(invoice.total_amount) }}</strong></td></tr>
           <tr><td colspan="3">{{ $t('detail.paid') }}</td><td>{{ formatMoney(invoice.paid_amount) }}</td></tr>
+          <tr v-if="remainingAmount > 0"><td colspan="3">{{ $t('detail.remaining') }}</td><td>{{ formatMoney(remainingAmount) }}</td></tr>
         </tfoot>
       </table>
+      <section class="payment-history">
+        <h3>{{ $t('detail.paymentHistory') }}</h3>
+        <p v-if="!invoice.payments?.length" class="empty-payments">{{ $t('detail.noPayments') }}</p>
+        <ul v-else>
+          <li v-for="payment in invoice.payments" :key="payment.id">
+            <span>{{ paymentMethodLabel(payment.method) }} - {{ formatDate(payment.paid_at || payment.created_at) }}</span>
+            <strong>{{ formatMoney(payment.amount) }}</strong>
+          </li>
+        </ul>
+      </section>
       <button type="button" class="btn-print" @click="printInvoice">🖨️ {{ $t('detail.print') }}</button>
     </div>
   </div>
@@ -56,19 +69,24 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useInvoicesStore } from '../stores/invoices.js'
 import { useAuthStore } from '../stores/auth.js'
 import { formatMoney, formatDate } from '../utils/format.js'
+import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
 const invoices = useInvoicesStore()
 const auth = useAuthStore()
+const { t } = useI18n()
 const invoice = ref(null)
 const showDeleteConfirmation = ref(false)
 const refreshing = ref(false)
+const subtotalAmount = computed(() => Number(invoice.value?.subtotal_amount) || (invoice.value?.items || []).reduce((total, item) => total + Number(item.total_price || 0), 0))
+const discountAmount = computed(() => Number(invoice.value?.discount_amount || 0))
+const remainingAmount = computed(() => Number(invoice.value?.remaining_amount ?? Math.max(0, Number(invoice.value?.total_amount || 0) - Number(invoice.value?.paid_amount || 0))))
 onMounted(async () => { invoice.value = await invoices.fetchWithItems(route.params.id) })
 
 async function refreshInvoice() {
@@ -102,6 +120,11 @@ async function confirmDeleteInvoice() {
     await router.replace({ name: 'invoices' })
   } catch (error) { alert(error?.message || 'Impossible de supprimer la facture') }
 }
+
+function paymentMethodLabel(method) {
+  const key = { cash: 'pos.cash', card: 'pos.card', transfer: 'pos.transfer', other: 'pos.other' }[method]
+  return key ? t(key) : method
+}
 </script>
 
 <style scoped>
@@ -118,6 +141,11 @@ async function confirmDeleteInvoice() {
 .items th, .items td { padding: 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
 .items th { background: #f9fafb; font-size: 0.85rem; color: #6b7280; text-transform: uppercase; }
 .items tfoot td { border-top: 2px solid #1f2937; border-bottom: none; padding-top: 12px; }
+.payment-history { border-top: 1px solid #e5e7eb; margin: 20px 0; padding-top: 16px; }
+.payment-history h3 { font-size: 1rem; margin: 0 0 8px; }
+.payment-history ul { list-style: none; margin: 0; padding: 0; }
+.payment-history li { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid #e5e7eb; }
+.empty-payments { color: #6b7280; margin: 0; }
 .btn-print { background: #3b82f6; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; }
 .btn-refresh-detail { margin-bottom: 10px; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white; color: #374151; cursor: pointer; }
 .btn-refresh-detail:disabled { cursor: wait; opacity: .55; }
@@ -144,7 +172,7 @@ async function confirmDeleteInvoice() {
   :global(.topbar), :global(.sidebar), :global(.hamburger) { display: none !important; }
   :global(.content) { padding: 0 !important; }
 
-  .btn-back, .manager-actions, .btn-print, .btn-refresh-detail, .confirmation-backdrop { display: none !important; }
+  .btn-back, .manager-actions, .btn-print, .btn-refresh-detail, .confirmation-backdrop, .payment-history { display: none !important; }
   .invoice-detail {
     width: 80mm;
     max-width: 80mm;

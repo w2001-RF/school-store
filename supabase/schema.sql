@@ -60,11 +60,15 @@ CREATE TABLE IF NOT EXISTS invoices (
   customer_name TEXT,
   total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
   paid_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
+  payment_method TEXT NOT NULL DEFAULT 'cash',
   status TEXT NOT NULL CHECK (status IN ('pending','paid','cancelled')) DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES clients(id) ON DELETE SET NULL;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
 
 CREATE TABLE IF NOT EXISTS client_product_prices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -1,8 +1,8 @@
 <template>
   <aside class="sidebar" :class="{ open }">
     <div class="brand">
-      <span class="logo">📚</span>
-      <span><strong class="brand-name">School Store</strong><small>gestion scolaire</small></span>
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12c7-3 15-2 21 3v24c-6-5-14-6-21-3V12Zm32 0c-7-3-15-2-21 3v24c6-5 14-6 21-3V12Z" /><path d="M24 15v24" /></svg>
+      <span><strong class="brand-name">{{ $t('brand.name') }}</strong><small>{{ $t('brand.tagline') }}</small></span>
     </div>
     <nav class="nav" aria-label="Menu principal">
       <router-link to="/dashboard" class="nav-item" @click="$emit('close')">
@@ -45,7 +45,7 @@ const auth = useAuthStore()
   font-size: 1.1rem; font-weight: 700;
   border-bottom: 1px solid rgba(255,255,255,.14);
 }
-.logo { font-size: 1.6rem; }
+.logo { width: 32px; height: 32px; fill: none; stroke: #f5c86b; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
 .brand-name { display: block; }
 .brand small { display: block; margin-top: 3px; color: #a8d6d1; font-size: .72rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; }
 .nav { display: flex; flex-direction: column; padding: 12px 0; flex: 1; }

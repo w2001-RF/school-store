@@ -3,7 +3,7 @@
     <div class="toolbar">
       <div class="search-container">
         <input v-model="search" @input="resetPage" :placeholder="`🔍 ${$t('common.search')}...`" class="search" />
-        <button class="btn-icon camera-btn" @click="showScanner = true" title="Scanner un code-barres">📷</button>
+        <button class="btn-icon camera-btn" @click="openSearchScanner" :title="$t('productsView.scanBarcode')" :aria-label="$t('productsView.scanBarcode')">📷</button>
       </div>
       <button class="btn-secondary refresh-button" type="button" :disabled="store.loading" :title="$t('actions.refresh')" @click="refreshProducts">↻ {{ $t('actions.refresh') }}</button>
       <label class="select-all"><input type="checkbox" :checked="allSelected" @change="toggleAll" /> Tout sélectionner</label>
@@ -40,7 +40,11 @@
         </div>
         <div class="form-group" aria-live="polite">
           <label>{{ $t('common.barcode') }} *</label>
-          <input v-model="form.barcode" required />
+          <div class="barcode-field">
+            <input v-model="form.barcode" required />
+            <button type="button" class="btn-icon scan-form-barcode" :title="$t('productsView.scanBarcode')" :aria-label="$t('productsView.scanBarcode')" @click="openFormScanner">📷</button>
+          </div>
+          <small class="field-hint">{{ $t('productsView.barcodeHint') }}</small>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -90,7 +94,7 @@
         <button type="button" class="btn-danger" @click="confirmDelete">Supprimer</button>
       </div>
     </Modal>
-    <Modal v-if="showScanner" title="Scanner un produit" @close="showScanner = false">
+    <Modal v-if="showScanner" :title="scannerTarget === 'form' ? $t('productsView.scanBarcode') : $t('productsView.scanProduct')" @close="showScanner = false">
       <BarcodeScanner @scan="handleScan" />
     </Modal>
   </div>
@@ -108,14 +112,17 @@ import Pagination from '../components/common/Pagination.vue'
 import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
 import { usePagination } from '../composables/usePagination.js'
 import { useDebouncedRef } from '../composables/useDebounce.js'
+import { useI18n } from 'vue-i18n'
 
 const store = useProductsStore()
 const categoriesStore = useCategoriesStore()
+const { t } = useI18n()
 const search = ref('')
 const debouncedSearch = useDebouncedRef(search, 300)
 const showForm = ref(false)
 const showBulk = ref(false)
 const showScanner = ref(false)
+const scannerTarget = ref('search')
 const form = ref({})
 const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
@@ -161,9 +168,28 @@ function toggleAll() {
 }
 
 function handleScan(code) {
+  if (scannerTarget.value === 'form') {
+    form.value.barcode = code
+    const existingProduct = store.items.find(product => product.barcode === code && product.id !== form.value.id)
+    formError.value = existingProduct
+      ? t('productsView.duplicateBarcode', { name: existingProduct.name })
+      : ''
+    showScanner.value = false
+    return
+  }
   search.value = code
   showScanner.value = false
   resetPage()
+}
+
+function openFormScanner() {
+  scannerTarget.value = 'form'
+  showScanner.value = true
+}
+
+function openSearchScanner() {
+  scannerTarget.value = 'search'
+  showScanner.value = true
 }
 
 function requestBulkDelete() {
@@ -300,6 +326,10 @@ async function confirmDelete() {
 .form-group input, .form-group select, .form-group textarea {
   width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box;
 }
+.barcode-field { display: flex; gap: 8px; }
+.barcode-field input { min-width: 0; }
+.scan-form-barcode { flex: 0 0 42px; padding: 0; }
+.field-hint { display: block; color: #6b7280; font-size: .8rem; margin-top: 4px; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }

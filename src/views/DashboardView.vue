@@ -3,8 +3,8 @@
     <section class="welcome-band">
       <div>
         <p class="eyebrow">{{ $t('pages.dashboard') }}</p>
-        <h2>Bonjour, {{ auth.user?.fullName }} <span aria-hidden="true">👋</span></h2>
-        <p class="welcome-copy">Suivez l'activite de votre boutique scolaire en un coup d'oeil.</p>
+        <h2>{{ $t('dashboard.greeting', { name: auth.user?.fullName }) }} <span aria-hidden="true">👋</span></h2>
+        <p class="welcome-copy">{{ $t('dashboard.welcomeCopy') }}</p>
       </div>
       <router-link to="/invoices/new" class="welcome-action">➕ {{ $t('dashboard.createInvoice') }}</router-link>
     </section>
@@ -68,7 +68,7 @@
       <div v-if="recentInvoices.length === 0" class="empty">{{ $t('dashboard.noInvoices') }}</div>
       <div v-else class="invoice-list">
         <router-link v-for="invoice in recentInvoices" :key="invoice.id" :to="`/invoices/${invoice.id}`" class="invoice-row">
-          <span><strong>{{ invoice.invoice_number }}</strong><small>{{ invoice.customer_name || 'Client non renseigné' }}</small></span>
+          <span><strong>{{ invoice.invoice_number }}</strong><small>{{ invoice.customer_name || $t('dashboard.unknownClient') }}</small></span>
           <span>{{ formatMoney(invoice.total_amount) }}</span>
           <span class="status" :class="invoice.status">{{ statusLabel(invoice.status) }}</span>
         </router-link>
