@@ -147,10 +147,21 @@ export class SQLiteAdapter extends DatabaseAdapter {
         unit_price REAL NOT NULL,
         total_price REAL NOT NULL
       );
+      CREATE TABLE payments (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        recorded_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+        amount REAL NOT NULL CHECK (amount >= 0),
+        method TEXT NOT NULL DEFAULT 'cash',
+        payment_reference TEXT,
+        paid_at TEXT DEFAULT (datetime('now')),
+        created_at TEXT DEFAULT (datetime('now'))
+      );
       CREATE INDEX idx_products_barcode ON products(barcode);
       CREATE INDEX idx_invoices_agent ON invoices(agent_id);
       CREATE INDEX idx_invoices_status ON invoices(status);
       CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
+      CREATE INDEX idx_payments_invoice ON payments(invoice_id);
 
       CREATE TRIGGER trg_products_updated AFTER UPDATE ON products
       BEGIN UPDATE products SET updated_at = datetime('now') WHERE id = NEW.id; END;
@@ -197,6 +208,17 @@ export class SQLiteAdapter extends DatabaseAdapter {
       if (!invoiceColumns.some(([,, name]) => name === 'payment_method')) {
         this.db.run('ALTER TABLE invoices ADD COLUMN payment_method TEXT NOT NULL DEFAULT "cash"')
       }
+      this.db.run(`CREATE TABLE IF NOT EXISTS payments (
+        id TEXT PRIMARY KEY,
+        invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+        recorded_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+        amount REAL NOT NULL CHECK (amount >= 0),
+        method TEXT NOT NULL DEFAULT 'cash',
+        payment_reference TEXT,
+        paid_at TEXT DEFAULT (datetime('now')),
+        created_at TEXT DEFAULT (datetime('now'))
+      )`)
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)')
       this.db.run(
         `INSERT INTO clients (id, name, discount_percent)
          SELECT ?, 'Passager', 0

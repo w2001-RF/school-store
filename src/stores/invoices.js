@@ -251,6 +251,16 @@ export const useInvoicesStore = defineStore('invoices', () => {
         for (const line of current.value.lines) {
           await db.create('invoice_items', { ...line, invoice_id: invoice.id })
         }
+        if (normalizedPayment.paid_amount > 0) {
+          await db.create('payments', {
+            invoice_id: invoice.id,
+            recorded_by: auth.user.id,
+            amount: normalizedPayment.paid_amount,
+            method: normalizedPayment.payment_method,
+            payment_reference: payment?.payment_reference || null,
+            paid_at: new Date().toISOString()
+          })
+        }
       } catch (e) {
         await db.delete('invoices', invoice.id).catch(() => {})
         throw e
@@ -305,7 +315,11 @@ export const useInvoicesStore = defineStore('invoices', () => {
   async function fetchWithItems(id) {
     const invoice = await db.findById('invoices', id)
     const lines = await db.find('invoice_items', { where: { invoice_id: id } })
-    return { ...(await withAgent(invoice)), items: lines }
+    const payments = await db.find('payments', {
+      where: { invoice_id: id },
+      orderBy: { field: 'paid_at', ascending: false }
+    })
+    return { ...(await withAgent(invoice)), items: lines, payments }
   }
 
   async function updateStatus(id, status) {
