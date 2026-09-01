@@ -148,6 +148,7 @@ body {
 :root[data-theme='dark'] .login-card .brand-mark { background: var(--gold) !important; color: #152725 !important; }
 :root[data-theme='dark'] .product-image,
 :root[data-theme='dark'] .scanner-video { background: #0b1716 !important; }
+:root[data-theme='dark'] .manager-actions > label:nth-child(1) > select:nth-child(1) {color: white; }
 input, button, select, textarea { font-family: inherit; }
 button, a { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, opacity .18s ease; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(239, 118, 93, .35); outline-offset: 2px; }

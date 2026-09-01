@@ -1,9 +1,12 @@
 <template>
   <div class="scanner-wrapper">
-    <div v-if="!scanning && !errorMsg" class="scanner-placeholder">
+    <div v-if="!scanning && !errorMsg && !hardwareMode" class="scanner-placeholder">
       <div class="scanner-icon">📷</div>
       <p>{{ $t('scanner.activate') }}</p>
       <button class="btn-primary" @click="start">{{ $t('scanner.start') }}</button>
+      <button v-if="hardwareSupported" class="btn-secondary hardware-btn" @click="startHardware">
+        🔌 {{ $t('scanner.useDatalogic', 'Use Datalogic Scanner') }}
+      </button>
     </div>
     <div v-else-if="errorMsg" class="scanner-error">
       <p>⚠️ {{ errorMsg }}</p>
@@ -26,6 +29,18 @@
         <button class="btn-primary" @click="submitManual">{{ $t('scanner.validate') }}</button>
       </div>
     </div>
+    <div v-else-if="hardwareMode" class="scanner-active hardware-scanner">
+      <div class="hardware-status">
+        <div class="status-icon">🔌</div>
+        <h3>{{ $t('scanner.hardwareScanner', 'Datalogic Scanner') }}</h3>
+        <p class="status-text">{{ $t('scanner.waitingForScan', 'Waiting for barcode scan...') }}</p>
+      </div>
+      <div class="manual-entry">
+        <input v-model="manualCode" :placeholder="$t('scanner.code')" @keyup.enter="submitManual" />
+        <button class="btn-primary" @click="submitManual">{{ $t('scanner.validate') }}</button>
+      </div>
+      <button class="btn-secondary" @click="stopHardware">{{ $t('scanner.stop') }}</button>
+    </div>
     <div v-if="lastScanned" class="last-scanned">
       ✅ {{ $t('scanner.last') }} : <strong>{{ lastScanned }}</strong>
     </div>
@@ -33,8 +48,9 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount, nextTick } from 'vue'
+import { ref, onBeforeUnmount, nextTick, onMounted } from 'vue'
 import { Html5Qrcode } from 'html5-qrcode'
+import { useHardware } from '../../composables/useHardware.js'
 
 const emit = defineEmits(['scan'])
 const elementId = `scanner-${Date.now()}`
@@ -44,10 +60,23 @@ const errorMsg = ref('')
 const manualCode = ref('')
 const manualEntry = ref(false)
 const lastScanned = ref('')
+const hardwareMode = ref(false)
+const hardwareSupported = ref(false)
+
+const { scannerSupported, connectScanner, disconnectScanner, onScan } = useHardware()
+
 let scanner = null
 let scanLocked = false
+let unsubscribeScan = null
 
-onBeforeUnmount(() => stop())
+onMounted(async () => {
+  hardwareSupported.value = scannerSupported.value
+})
+
+onBeforeUnmount(async () => {
+  await stop()
+  await stopHardware()
+})
 
 async function start() {
   errorMsg.value = ''
@@ -101,6 +130,35 @@ async function stop() {
   starting.value = false
 }
 
+async function startHardware() {
+  try {
+    errorMsg.value = ''
+    await connectScanner()
+    hardwareMode.value = true
+    manualEntry.value = true
+
+    // Register scan callback
+    unsubscribeScan = onScan((barcode) => {
+      lastScanned.value = barcode
+      emit('scan', barcode)
+      setTimeout(() => { lastScanned.value = '' }, 1500)
+    })
+  } catch (error) {
+    errorMsg.value = `Erreur connexion scanner: ${error.message}`
+    console.error('Hardware scanner error:', error)
+  }
+}
+
+async function stopHardware() {
+  if (unsubscribeScan) {
+    unsubscribeScan()
+    unsubscribeScan = null
+  }
+  await disconnectScanner()
+  hardwareMode.value = false
+  manualEntry.value = false
+}
+
 function submitManual() {
   if (manualCode.value.trim()) {
     lastScanned.value = manualCode.value.trim()
@@ -126,6 +184,11 @@ function submitManual() {
 .scanner-icon {
   font-size: 4rem;
   margin-bottom: 12px;
+}
+
+.hardware-btn {
+  margin-top: 12px;
+  width: 100%;
 }
 
 .scanner-error {
@@ -229,6 +292,46 @@ function submitManual() {
   background: #d1fae5;
   border-radius: 6px;
   text-align: center;
+}
+
+.hardware-scanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  min-height: 300px;
+}
+
+.hardware-status {
+  margin-bottom: 24px;
+}
+
+.status-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.hardware-status h3 {
+  margin: 12px 0 8px;
+  font-size: 1.3rem;
+  color: #1f2937;
+}
+
+.status-text {
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
 .btn-primary,
