@@ -98,9 +98,15 @@ export const useInvoicesStore = defineStore('invoices', () => {
       ? []
       : await db.find('clients', { where: { name: ['ilike', 'passager'] }, limit: 1 })
     const clientId = current.value.client_id || defaultClients[0]?.id || null
+    const client = clientId ? await db.findById('clients', clientId) : null
+    const isPassager = !client || client.name?.toLowerCase() === 'passager'
 
-    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0 || payment.paid_amount < currentTotal.value) {
-        throw new Error('Le montant payé est invalide.')
+    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0) {
+      throw new Error('Le montant payé est invalide.')
+    }
+    // Un client passager (anonyme) ne peut pas laisser de solde impayé
+    if (isPassager && payment.paid_amount < currentTotal.value) {
+      throw new Error('Le paiement complet est requis pour un client passager.')
     }
 
     const payload = {

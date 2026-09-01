@@ -1,6 +1,12 @@
 -- Run this migration in Supabase SQL Editor for an existing project.
 -- Adds audit trail tables: stock_adjustments (stock changes log) and payments (per-payment records).
 
+-- Allows partial payments (pending) or overpayments (change due); only the app enforces full payment for the passager client
+DO $$ BEGIN
+  ALTER TABLE public.invoices ADD CONSTRAINT chk_paid_amount CHECK (paid_amount >= 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.stock_adjustments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
