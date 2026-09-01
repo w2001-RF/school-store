@@ -1,5 +1,5 @@
 <template>
-  <aside class="sidebar" :class="{ open }">
+  <aside class="sidebar" :class="{ open, rtl: isRTL }">
     <div class="brand">
       <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 12c7-3 15-2 21 3v24c-6-5-14-6-21-3V12Zm32 0c-7-3-15-2-21 3v24c6-5 14-6 21-3V12Z" /><path d="M24 15v24" /></svg>
       <span><strong class="brand-name">{{ $t('brand.name') }}</strong><small>{{ $t('brand.tagline') }}</small></span>
@@ -30,9 +30,14 @@
 
 <script setup>
 import { useAuthStore } from '../../stores/auth.js'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 defineProps({ open: Boolean })
 defineEmits(['close'])
 const auth = useAuthStore()
+const { locale } = useI18n()
+const isRTL = computed(() => locale.value === 'ar')
 </script>
 
 <style scoped>
@@ -48,6 +53,10 @@ const auth = useAuthStore()
 .logo { width: 32px; height: 32px; fill: none; stroke: #f5c86b; stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
 .brand-name { display: block; }
 .brand small { display: block; margin-top: 3px; color: #a8d6d1; font-size: .72rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; }
+
+:root[dir='rtl'] .brand {
+  flex-direction: row-reverse;
+}
 .nav { display: flex; flex-direction: column; padding: 12px 0; flex: 1; }
 .nav-item {
   margin: 3px 12px; padding: 13px 14px; color: #c3e0dc; text-decoration: none;
@@ -60,12 +69,25 @@ const auth = useAuthStore()
 .nav-item.highlight:hover { background: #059669; }
 .backdrop { display: none; }
 
+:root[dir='rtl'] .nav-item {
+  flex-direction: row-reverse;
+}
+
+:root[dir='rtl'] .nav-item:hover {
+  transform: translateX(-3px);
+}
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
     transform: translateX(-100%); transition: transform 0.3s ease;
   }
   .sidebar.open { transform: translateX(0); }
+  .sidebar.rtl {
+    left: auto; right: 0;
+    transform: translateX(100%);
+  }
+  .sidebar.rtl.open { transform: translateX(0); }
   .backdrop {
     display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99;
   }

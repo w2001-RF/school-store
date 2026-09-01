@@ -84,4 +84,11 @@ onUnmounted(() => {
 .modal-head h3 { margin: 0; }
 .close { background: none; border: none; font-size: 1.5rem; cursor: pointer; line-height: 1; }
 .modal-body { padding: 20px; }
+
+@media (max-width: 450px) {
+  .modal-backdrop { align-items: stretch; padding: 0; }
+  .modal { border-radius: 0; max-height: none; }
+  .modal-head { padding: 16px; }
+  .modal-body { padding: 16px; }
+}
 </style>

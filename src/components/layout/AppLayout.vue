@@ -51,6 +51,7 @@ const auth = useAuthStore()
 const { t, locale } = useI18n()
 const { preference, setTheme } = useTheme()
 const sidebarOpen = ref(false)
+const isRTL = computed(() => locale.value === 'ar')
 
 const titleKeys = {
   dashboard: 'pages.dashboard', products: 'pages.products', categories: 'pages.categories', clients: 'pages.clients',
@@ -98,10 +99,36 @@ async function logout() {
 .btn-icon:hover { background: #edf6f4; transform: translateY(-1px); }
 .content { width: 100%; max-width: 1440px; margin: 0 auto; padding: 30px 34px 48px; flex: 1; background: var(--paper); }
 
+:root[dir='rtl'] .topbar {
+  flex-direction: row-reverse;
+}
+
+:root[dir='rtl'] .hamburger {
+  order: 3;
+}
+
+:root[dir='rtl'] .topbar-title {
+  order: 2;
+  text-align: right;
+}
+
+:root[dir='rtl'] .user-info {
+  order: 1;
+  flex-direction: row-reverse;
+}
+
 @media (max-width: 768px) {
   .hamburger { display: block; }
   .user-name { display: none; }
   .topbar { padding: 13px 16px; }
   .content { padding: 20px 16px 32px; }
+}
+
+@media (max-width: 450px) {
+  .topbar { gap: 8px; }
+  .topbar-title { font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-info { gap: 6px; }
+  .language-picker select, .theme-picker select { max-width: 64px; padding: 6px 3px; font-size: .8rem; }
+  .role-badge { display: none; }
 }
 </style>

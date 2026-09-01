@@ -32,8 +32,8 @@
       </div>
 
       <div class="actions">
-        <button type="button" class="secondary" @click="$emit('close')">{{ $t('common.cancel') }}</button>
-        <button type="submit" class="primary" :disabled="!isPaymentValid">{{ $t('invoiceCreate.validate') }}</button>
+        <button type="button" class="secondary" :disabled="submitting" @click="$emit('close')">{{ $t('common.cancel') }}</button>
+        <button type="submit" class="primary" :disabled="!isPaymentValid || submitting">{{ submitting ? $t('pos.processingPayment') : $t('invoiceCreate.validate') }}</button>
       </div>
     </form>
   </Modal>
@@ -48,7 +48,8 @@ import { formatMoney } from '../../utils/format.js'
 const props = defineProps({
   subtotal: { type: Number, required: true },
   initialDiscount: { type: Number, default: 0 },
-  isPassager: { type: Boolean, default: false }
+  isPassager: { type: Boolean, default: false },
+  submitting: { type: Boolean, default: false }
 })
 const emit = defineEmits(['close', 'confirm'])
 const paidAmount = ref(0)

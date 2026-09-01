@@ -172,4 +172,12 @@ async function createRows(rows, onProgress = () => {}) {
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
 .error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
+
+@media (max-width: 450px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar h2 { text-align: center; }
+  .toolbar > button { width: 100%; }
+  .select-all { justify-content: center; }
+  .categories-grid { grid-template-columns: 1fr; }
+}
 </style>
