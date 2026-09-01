@@ -209,3 +209,63 @@ CREATE POLICY "Access invoice items via parent" ON invoice_items
   );
 
 ALTER TABLE invoices ADD CONSTRAINT chk_paid_amount CHECK (paid_amount >= 0 AND paid_amount >= total_amount);
+
+-- Audit trail : historique des mouvements de stock
+CREATE TABLE IF NOT EXISTS stock_adjustments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
+  changed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  quantity_delta INTEGER NOT NULL,
+  reason TEXT NOT NULL DEFAULT 'sale',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS stock_adjustments_product_id_idx ON stock_adjustments(product_id);
+CREATE INDEX IF NOT EXISTS stock_adjustments_created_at_idx ON stock_adjustments(created_at);
+
+ALTER TABLE stock_adjustments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated can read stock adjustments" ON stock_adjustments
+  FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated can create stock adjustments" ON stock_adjustments
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Managers manage stock adjustments" ON stock_adjustments
+  FOR ALL USING (public.current_user_role() = 'manager');
+
+-- Audit trail : historique des paiements par facture
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+  recorded_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+  method TEXT NOT NULL DEFAULT 'cash',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS payments_invoice_id_idx ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS payments_created_at_idx ON payments(created_at);
+
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Access payments via parent invoice" ON payments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM invoices
+      WHERE invoices.id = payments.invoice_id
+      AND (
+        public.current_user_role() = 'manager' OR
+        invoices.agent_id = auth.uid()
+      )
+    )
+  );
+CREATE POLICY "Agents create payments on own invoices" ON payments
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM invoices
+      WHERE invoices.id = payments.invoice_id
+      AND invoices.agent_id = auth.uid()
+    )
+  );
+CREATE POLICY "Managers manage payments" ON payments
+  FOR ALL USING (public.current_user_role() = 'manager');

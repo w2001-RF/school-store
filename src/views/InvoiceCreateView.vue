@@ -142,6 +142,7 @@ import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
 import Modal from '../components/common/Modal.vue'
 import InvoiceItemRow from '../components/invoices/InvoiceItemRow.vue'
 import { useI18n } from 'vue-i18n'
+import { useDebouncedRef } from '../composables/useDebounce.js'
 
 const router = useRouter()
 const invoices = useInvoicesStore()
@@ -152,6 +153,8 @@ const isMobile = ref(false)
 const lastError = ref('')
 const productSearch = ref('')
 const clientSearch = ref('')
+const debouncedProductSearch = useDebouncedRef(productSearch, 300)
+const debouncedClientSearch = useDebouncedRef(clientSearch, 300)
 const customerName = computed({
   get: () => invoices.current?.customer_name || '',
   set: v => invoices.current && (invoices.current.customer_name = v)
@@ -168,7 +171,7 @@ const quickAmounts = computed(() => {
 })
 
 const productMatches = computed(() => {
-  const search = productSearch.value.trim().toLowerCase()
+  const search = debouncedProductSearch.value.trim().toLowerCase()
   if (!search) return []
   return products.items.filter(product =>
     product.name.toLowerCase().includes(search) ||
@@ -177,7 +180,7 @@ const productMatches = computed(() => {
 })
 
 const clientMatches = computed(() => {
-  const search = clientSearch.value.trim().toLowerCase()
+  const search = debouncedClientSearch.value.trim().toLowerCase()
   if (!search) return []
   return clients.items.filter(client =>
     [client.name, client.email, client.phone].some(value => (value || '').toLowerCase().includes(search))
