@@ -191,6 +191,31 @@ export const useInvoicesStore = defineStore('invoices', () => {
     current.value.discount_amount = normalizedPayment.discount_amount
     current.value.payment_method = normalizedPayment.payment_method
 
+    if (db.constructor.name === 'SupabaseAdapter') {
+      loading.value = true
+      try {
+        const invoice = await db.rpc('create_invoice_transaction', {
+          p_invoice_number: current.value.invoice_number,
+          p_client_id: clientId,
+          p_customer_name: current.value.customer_name || null,
+          p_lines: current.value.lines.map(line => ({
+            product_id: line.product_id,
+            quantity: Number(line.quantity)
+          })),
+          p_discount_amount: normalizedPayment.discount_amount,
+          p_payment_amount: normalizedPayment.paid_amount,
+          p_payment_method: normalizedPayment.payment_method,
+          p_payment_reference: payment?.payment_reference || null
+        })
+
+        await productsStore.fetchAll()
+        current.value = null
+        return invoice
+      } finally {
+        loading.value = false
+      }
+    }
+
     const payload = {
       invoice_number: current.value.invoice_number,
       agent_id: auth.user.id,
