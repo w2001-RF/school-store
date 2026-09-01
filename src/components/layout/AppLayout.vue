@@ -104,4 +104,12 @@ async function logout() {
   .topbar { padding: 13px 16px; }
   .content { padding: 20px 16px 32px; }
 }
+
+@media (max-width: 450px) {
+  .topbar { gap: 8px; }
+  .topbar-title { font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-info { gap: 6px; }
+  .language-picker select, .theme-picker select { max-width: 64px; padding: 6px 3px; font-size: .8rem; }
+  .role-badge { display: none; }
+}
 </style>

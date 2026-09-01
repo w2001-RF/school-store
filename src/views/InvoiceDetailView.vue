@@ -201,4 +201,15 @@ function paymentMethodLabel(method) {
   .items tfoot td { border-top: 1px solid #000; border-bottom: none; padding-top: 2mm; }
   .items tfoot tr + tr td { border-top: none; padding-top: 1mm; }
 }
+
+@media (max-width: 450px) {
+  .invoice-detail { padding: 16px; }
+  .head { flex-direction: column; align-items: stretch; }
+  .status { align-self: flex-start; }
+  .manager-actions { flex-direction: column; align-items: stretch; }
+  .manager-actions select { width: 100%; }
+  .btn-refresh-detail, .btn-print { width: 100%; text-align: center; }
+  .items { display: block; overflow-x: auto; white-space: nowrap; }
+  .payment-history li { flex-wrap: wrap; }
+}
 </style>

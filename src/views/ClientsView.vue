@@ -176,4 +176,13 @@ async function confirmRemove() {
 .error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
 @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; gap: 0; } }
+
+@media (max-width: 450px) {
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .search { font-size: 16px; }
+  .toolbar > .btn-primary, .toolbar > .btn-secondary { width: 100%; text-align: center; }
+  .clients-grid { grid-template-columns: 1fr; }
+  .actions { flex-wrap: wrap; }
+  .icon-button { flex: 1; min-height: 40px; }
+}
 </style>
