@@ -99,7 +99,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
       : await db.find('clients', { where: { name: ['ilike', 'passager'] }, limit: 1 })
     const clientId = current.value.client_id || defaultClients[0]?.id || null
 
-    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0 || payment.paid_amount > currentTotal.value) {
+    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0 || payment.paid_amount < currentTotal.value) {
         throw new Error('Le montant payé est invalide.')
     }
 

@@ -253,6 +253,7 @@ function clearCart() {
 }
 
 function confirmPayment() {
+  console.log('Confirming payment with amount:', paidAmount.value)
   invoices.validate({ paid_amount: paidAmount.value })
     .then(invoice => {
       showPayment.value = false
@@ -260,7 +261,10 @@ function confirmPayment() {
       else alert(`✅ ${t('invoiceCreate.success')}`)
       router.push({ name: 'invoice-detail', params: { id: invoice.id } })
     })
-    .catch(e => alert('❌ ' + e.message))
+    .catch(e => {
+      if (isMobile.value) showToast(`❌ ${e.message}`)
+      else alert('❌ ' + e.message)
+    })
 }
 
 function showToast(message) {

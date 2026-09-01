@@ -26,7 +26,7 @@
         <p class="price">{{ formatMoney(p.price) }}</p>
         <div class="actions">
           <button class="btn-icon" @click="openForm(p)">✏️</button>
-          <button class="btn-icon danger" @click="confirmDelete(p)">🗑️</button>
+          <button class="btn-icon danger" @click="requestDelete(p)">🗑️</button>
         </div>
       </div>
     </div>
@@ -68,6 +68,7 @@
           <input v-model="form.image_url" type="url" placeholder="https://..." />
           <input type="file" accept="image/*" @change="loadImage" />
         </div>
+        <div v-if="formError" class="error" aria-live="polite" role="alert">{{ formError }}</div>
         <div class="form-actions">
           <button type="button" class="btn-secondary" @click="showForm = false">{{ $t('common.cancel') }}</button>
           <button type="submit" class="btn-primary">{{ $t('common.save') }}</button>
@@ -80,6 +81,13 @@
       <div class="form-actions">
         <button type="button" class="btn-secondary" @click="deleteConfirmation = false">Annuler</button>
         <button type="button" class="btn-danger" @click="confirmBulkDelete">Supprimer</button>
+      </div>
+    </Modal>
+    <Modal v-if="deleteTarget" title="Supprimer le produit" @close="deleteTarget = null">
+      <p>Supprimer « {{ deleteTarget.name }} » ? Cette action est définitive.</p>
+      <div class="form-actions">
+        <button type="button" class="btn-secondary" @click="deleteTarget = null">Annuler</button>
+        <button type="button" class="btn-danger" @click="confirmDelete">Supprimer</button>
       </div>
     </Modal>
     <Modal v-if="showScanner" title="Scanner un produit" @close="showScanner = false">
@@ -109,6 +117,8 @@ const showScanner = ref(false)
 const form = ref({})
 const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
+const deleteTarget = ref(null)
+const formError = ref('')
 const productFields = { name: ['name', 'nom'], barcode: ['barcode', 'code_barres', 'codebarres'], price: ['price', 'prix'], stock: ['stock'], category_id: ['category_id', 'categorie_id', 'categorie', 'category'], image_url: ['image_url', 'image'] }
 
 onMounted(async () => {
@@ -176,14 +186,33 @@ function openForm(p = null) {
   form.value = p
     ? { ...p }
     : { name: '', barcode: '', price: 0, stock: 0, category_id: null, description: '', image_url: '' }
+  formError.value = ''
   showForm.value = true
 }
 
 function loadImage(event) {
   const file = event.target.files?.[0]
   if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    formError.value = "L'image est trop volumineuse (max 5 Mo)."
+    event.target.value = ''
+    return
+  }
   const reader = new FileReader()
-  reader.onload = () => { form.value.image_url = reader.result }
+  reader.onload = () => {
+    const img = new Image()
+    img.onload = () => {
+      const maxDimension = 800
+      const scale = Math.min(1, maxDimension / Math.max(img.width, img.height))
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      form.value.image_url = canvas.toDataURL('image/jpeg', 0.8)
+    }
+    img.src = reader.result
+  }
   reader.readAsDataURL(file)
 }
 
@@ -211,6 +240,7 @@ async function createRows(rows, onProgress = () => {}) {
 }
 
 async function save() {
+  formError.value = ''
   try {
     if (form.value.id) {
       await store.update(form.value.id, form.value)
@@ -218,11 +248,16 @@ async function save() {
       await store.create(form.value)
     }
     showForm.value = false
-  } catch (e) { alert(e.message) }
+  } catch (e) { formError.value = e.message }
 }
 
-async function confirmDelete(p) {
-  if (confirm(`Supprimer "${p.name}" ?`)) await store.remove(p.id)
+function requestDelete(p) {
+  deleteTarget.value = p
+}
+
+async function confirmDelete() {
+  await store.remove(deleteTarget.value.id)
+  deleteTarget.value = null
 }
 </script>
 
@@ -266,6 +301,7 @@ async function confirmDelete(p) {
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 .btn-danger { background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; }
+.error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
 
 @media (max-width: 640px) {
   .toolbar { flex-direction: column; align-items: stretch; }
