@@ -11,8 +11,8 @@
             <div>
               <h2>🧾 {{ invoices.current?.invoice_number }}</h2>
               <div class="pos-actions">
-                <button type="button" class="btn-secondary" @click="showProductSearch = true">Ajouter un produit</button>
-                <button type="button" class="btn-secondary" @click="showClientSearch = true">Choisir un client</button>
+                <button type="button" class="btn-secondary" @click="showProductSearch = true">{{ $t('pos.addProduct') }}</button>
+                <button type="button" class="btn-secondary" @click="showClientSearch = true">{{ $t('pos.chooseClient') }}</button>
                 <button v-if="invoices.current?.client_id" type="button" class="clear-client" @click="clearClient">{{ $t('clientsView.noClient') }}</button>
               </div>
               <div v-if="selectedClientName" class="selected-client">
@@ -21,7 +21,7 @@
               <input v-model="customerName" :placeholder="$t('invoiceCreate.customerName')" class="customer-input" />
             </div>
             <button class="btn-secondary" @click="clearCart" :disabled="!invoices.current?.lines.length">
-              {{ $t('invoiceCreate.clear') }}
+              {{ $t('pos.clearCart') }}
             </button>
           </div>
 
@@ -56,12 +56,14 @@
       :subtotal="invoices.currentTotal"
       :initial-discount="invoices.currentDiscount"
       :is-passager="isPassager"
+      :submitting="submitting"
       @close="showPayment = false"
       @confirm="confirmPayment"
     />
     <ProductSearchDialog
       v-if="showProductSearch"
       :products="products.items"
+      :cart-lines="invoices.current?.lines || []"
       @close="showProductSearch = false"
       @select="addProduct"
     />
@@ -104,6 +106,7 @@ const customerName = computed({
 const showPayment = ref(false)
 const showProductSearch = ref(false)
 const showClientSearch = ref(false)
+const submitting = ref(false)
 const toastMessage = ref('')
 let toastTimer
 const isPassager = computed(() => {
@@ -162,18 +165,19 @@ function clearCart() {
   if (confirm('Vider le panier ?')) invoices.newDraft()
 }
 
-function confirmPayment(payment) {
-  invoices.validate(payment)
-    .then(invoice => {
-      showPayment.value = false
-      if (isMobile.value) showToast(`✅ ${t('invoiceCreate.success')}`)
-      else alert(`✅ ${t('invoiceCreate.success')}`)
-      router.push({ name: 'invoice-detail', params: { id: invoice.id } })
-    })
-    .catch(e => {
-      if (isMobile.value) showToast(`❌ ${e.message}`)
-      else alert('❌ ' + e.message)
-    })
+async function confirmPayment(payment) {
+  if (submitting.value) return
+  submitting.value = true
+  try {
+    const invoice = await invoices.validate(payment)
+    showPayment.value = false
+    showToast(t('invoiceCreate.success'))
+    await router.push({ name: 'invoice-detail', params: { id: invoice.id } })
+  } catch (error) {
+    showToast(error.message)
+  } finally {
+    submitting.value = false
+  }
 }
 
 function showToast(message) {
@@ -183,7 +187,7 @@ function showToast(message) {
 }
 
 function checkMobile() {
-  isMobile.value = window.innerWidth < 640
+  isMobile.value = window.innerWidth <= 450
 }
 
 </script>
@@ -208,5 +212,22 @@ function checkMobile() {
 
 @media (max-width: 900px) {
   .invoice-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 450px) {
+  .invoice-create { padding-bottom: 84px; }
+  .invoice-grid { display: flex; flex-direction: column; gap: 12px; }
+  .right { order: 1; }
+  .left { order: 2; }
+  .left :deep(.scanner-wrapper) { box-shadow: none; padding: 12px; }
+  .invoice-card { padding: 14px; border-radius: 8px; }
+  .invoice-head { display: block; }
+  .invoice-head h2 { font-size: 1rem; }
+  .pos-actions { display: grid; grid-template-columns: 1fr; }
+  .pos-actions .btn-secondary, .clear-client { min-height: 48px; text-align: left; }
+  .customer-input { min-height: 44px; font-size: 16px; }
+  .lines { max-height: none; }
+  :deep(.pos-summary .pay) { position: fixed; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom)); left: 16px; z-index: 20; min-height: 52px; box-shadow: 0 10px 24px rgba(7, 91, 96, .25); }
+  .mobile-toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
 </style>
