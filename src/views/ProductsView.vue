@@ -107,10 +107,12 @@ import BulkImportModal from '../components/common/BulkImportModal.vue'
 import Pagination from '../components/common/Pagination.vue'
 import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
 import { usePagination } from '../composables/usePagination.js'
+import { useDebouncedRef } from '../composables/useDebounce.js'
 
 const store = useProductsStore()
 const categoriesStore = useCategoriesStore()
 const search = ref('')
+const debouncedSearch = useDebouncedRef(search, 300)
 const showForm = ref(false)
 const showBulk = ref(false)
 const showScanner = ref(false)
@@ -130,8 +132,8 @@ async function refreshProducts() {
 }
 
 const filtered = computed(() => {
-  if (!search.value) return store.items
-  const s = search.value.toLowerCase()
+  if (!debouncedSearch.value) return store.items
+  const s = debouncedSearch.value.toLowerCase()
   return store.items.filter(p =>
     p.name.toLowerCase().includes(s) ||
     (p.barcode || '').includes(s)
