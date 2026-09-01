@@ -51,6 +51,7 @@ const auth = useAuthStore()
 const { t, locale } = useI18n()
 const { preference, setTheme } = useTheme()
 const sidebarOpen = ref(false)
+const isRTL = computed(() => locale.value === 'ar')
 
 const titleKeys = {
   dashboard: 'pages.dashboard', products: 'pages.products', categories: 'pages.categories', clients: 'pages.clients',
@@ -97,6 +98,24 @@ async function logout() {
 }
 .btn-icon:hover { background: #edf6f4; transform: translateY(-1px); }
 .content { width: 100%; max-width: 1440px; margin: 0 auto; padding: 30px 34px 48px; flex: 1; background: var(--paper); }
+
+:root[dir='rtl'] .topbar {
+  flex-direction: row-reverse;
+}
+
+:root[dir='rtl'] .hamburger {
+  order: 3;
+}
+
+:root[dir='rtl'] .topbar-title {
+  order: 2;
+  text-align: right;
+}
+
+:root[dir='rtl'] .user-info {
+  order: 1;
+  flex-direction: row-reverse;
+}
 
 @media (max-width: 768px) {
   .hamburger { display: block; }
