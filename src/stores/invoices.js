@@ -11,9 +11,22 @@ export function computePaymentSummary({
   discountAmount = 0
 }) {
   const netTotal = Math.max(0, Number(totalAmount) || 0)
-  const discount = Math.max(0, Number(discountAmount) || 0)
+  const discount = Number(discountAmount)
   const totalDue = Math.max(0, netTotal - discount)
   const safePaid = Number(paidAmount)
+
+  if (Number.isNaN(discount) || discount < 0 || discount > netTotal) {
+    return {
+      valid: false,
+      totalAmount: netTotal,
+      paidAmount: safePaid,
+      discountAmount: discount,
+      remaining: netTotal,
+      changeDue: 0,
+      status: 'pending',
+      error: 'La remise doit etre comprise entre 0 et 100 %.'
+    }
+  }
 
   if (Number.isNaN(safePaid) || safePaid < 0) {
     return {

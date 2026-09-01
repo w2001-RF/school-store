@@ -26,4 +26,11 @@ describe('computePaymentSummary', () => {
     expect(summary.valid).toBe(false)
     expect(summary.error).toBe('Le paiement complet est requis pour un client passager.')
   })
+
+  it('rejects a discount greater than the invoice total', () => {
+    const summary = computePaymentSummary({ totalAmount: 100, paidAmount: 0, discountAmount: 101 })
+
+    expect(summary.valid).toBe(false)
+    expect(summary.error).toBe('La remise doit etre comprise entre 0 et 100 %.')
+  })
 })

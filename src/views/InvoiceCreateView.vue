@@ -83,50 +83,24 @@
             </div>
           </div>
 
-          <div v-if="invoices.current?.lines.length" class="totals">
-            <div class="total-row">
-              <span>Sous-total</span>
-              <span>{{ formatMoney(invoices.currentTotal) }}</span>
-            </div>
-            <div class="total-row grand">
-              <span>TOTAL</span>
-              <span>{{ formatMoney(invoices.currentTotal) }}</span>
-            </div>
-          </div>
-
-          <button v-if="invoices.current?.lines.length" class="btn-pay" @click="showPayment = true">
-            💳 Procéder au paiement
-          </button>
+          <PosSummary
+            :subtotal="invoices.currentTotal"
+            :discount-amount="invoices.currentDiscount"
+            :has-items="Boolean(invoices.current?.lines.length)"
+            @pay="showPayment = true"
+          />
         </div>
       </div>
     </div>
 
-    <Modal v-if="showPayment" @close="showPayment = false" :title="$t('invoiceCreate.payment')">
-      <div class="payment-summary">
-        <div class="total-display">{{ formatMoney(invoices.currentTotal) }}</div>
-        <div class="form-group">
-          <label>{{ $t('invoiceCreate.received') }}</label>
-          <input v-model.number="paidAmount" type="number" step="0.01" min="0" autofocus />
-        </div>
-        <div v-if="paidAmount >= invoices.currentTotal" class="change-display">
-          {{ $t('invoiceCreate.change') }} : <strong>{{ formatMoney(paidAmount - invoices.currentTotal) }}</strong>
-        </div>
-        <div v-else class="remain-display">
-          {{ $t('invoiceCreate.remaining') }} : <strong>{{ formatMoney(invoices.currentTotal - paidAmount) }}</strong>
-        </div>
-        <div class="quick-amounts">
-          <button v-for="a in quickAmounts" :key="a" @click="paidAmount = a" class="quick-btn">
-            {{ formatMoney(a) }}
-          </button>
-        </div>
-        <div class="form-actions">
-          <button class="btn-secondary" @click="showPayment = false">{{ $t('common.cancel') }}</button>
-          <button class="btn-primary" :disabled="paidAmount < 0" @click="confirmPayment">
-            {{ $t('invoiceCreate.validate') }}
-          </button>
-        </div>
-      </div>
-    </Modal>
+    <PaymentDialog
+      v-if="showPayment"
+      :subtotal="invoices.currentTotal"
+      :initial-discount="invoices.currentDiscount"
+      :is-passager="isPassager"
+      @close="showPayment = false"
+      @confirm="confirmPayment"
+    />
     <div v-if="toastMessage" class="mobile-toast" role="status" aria-live="polite">{{ toastMessage }}</div>
   </div>
 </template>
@@ -139,8 +113,9 @@ import { useProductsStore } from '../stores/products.js'
 import { useClientsStore } from '../stores/clients.js'
 import { formatMoney } from '../utils/format.js'
 import BarcodeScanner from '../components/scanner/BarcodeScanner.vue'
-import Modal from '../components/common/Modal.vue'
 import InvoiceItemRow from '../components/invoices/InvoiceItemRow.vue'
+import PaymentDialog from '../components/pos/PaymentDialog.vue'
+import PosSummary from '../components/pos/PosSummary.vue'
 import { useI18n } from 'vue-i18n'
 import { useDebouncedRef } from '../composables/useDebounce.js'
 
@@ -161,13 +136,11 @@ const customerName = computed({
 })
 
 const showPayment = ref(false)
-const paidAmount = ref(0)
 const toastMessage = ref('')
 let toastTimer
-const quickAmounts = computed(() => {
-  const total = invoices.currentTotal || 0
-  const arr = [total, Math.ceil(total / 10) * 10, Math.ceil(total / 50) * 50, Math.ceil(total / 100) * 100, Math.ceil(total / 100) * 200]
-  return [...new Set(arr)].filter(x => x >= total)
+const isPassager = computed(() => {
+  const client = clients.items.find(client => client.id === invoices.current?.client_id)
+  return !client || client.name?.toLowerCase() === 'passager'
 })
 
 const productMatches = computed(() => {
@@ -255,9 +228,8 @@ function clearCart() {
   if (confirm('Vider le panier ?')) invoices.newDraft()
 }
 
-function confirmPayment() {
-  console.log('Confirming payment with amount:', paidAmount.value)
-  invoices.validate({ paid_amount: paidAmount.value })
+function confirmPayment(payment) {
+  invoices.validate(payment)
     .then(invoice => {
       showPayment.value = false
       if (isMobile.value) showToast(`✅ ${t('invoiceCreate.success')}`)
