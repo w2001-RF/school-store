@@ -131,6 +131,8 @@ export class SQLiteAdapter extends DatabaseAdapter {
         customer_name TEXT,
         total_amount REAL NOT NULL DEFAULT 0,
         paid_amount REAL NOT NULL DEFAULT 0,
+        discount_amount REAL NOT NULL DEFAULT 0,
+        payment_method TEXT NOT NULL DEFAULT 'cash',
         status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','cancelled')),
         notes TEXT,
         created_at TEXT DEFAULT (datetime('now'))
@@ -188,6 +190,12 @@ export class SQLiteAdapter extends DatabaseAdapter {
       const invoiceColumns = this.db.exec('PRAGMA table_info(invoices)')[0]?.values || []
       if (!invoiceColumns.some(([,, name]) => name === 'client_id')) {
         this.db.run('ALTER TABLE invoices ADD COLUMN client_id TEXT REFERENCES clients(id) ON DELETE SET NULL')
+      }
+      if (!invoiceColumns.some(([,, name]) => name === 'discount_amount')) {
+        this.db.run('ALTER TABLE invoices ADD COLUMN discount_amount REAL NOT NULL DEFAULT 0')
+      }
+      if (!invoiceColumns.some(([,, name]) => name === 'payment_method')) {
+        this.db.run('ALTER TABLE invoices ADD COLUMN payment_method TEXT NOT NULL DEFAULT "cash"')
       }
       this.db.run(
         `INSERT INTO clients (id, name, discount_percent)

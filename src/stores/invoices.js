@@ -4,6 +4,58 @@ import { db } from '../services/database/index.js'
 import { useProductsStore } from './products.js'
 import { useAuthStore } from './auth.js'
 
+export function computePaymentSummary({
+  totalAmount,
+  paidAmount,
+  isPassager = false,
+  discountAmount = 0
+}) {
+  const netTotal = Math.max(0, Number(totalAmount) || 0)
+  const discount = Math.max(0, Number(discountAmount) || 0)
+  const totalDue = Math.max(0, netTotal - discount)
+  const safePaid = Number(paidAmount)
+
+  if (Number.isNaN(safePaid) || safePaid < 0) {
+    return {
+      valid: false,
+      totalAmount: totalDue,
+      paidAmount: safePaid,
+      discountAmount: discount,
+      remaining: totalDue,
+      changeDue: 0,
+      status: 'pending',
+      error: 'Le montant payé est invalide.'
+    }
+  }
+
+  if (isPassager && safePaid < totalDue) {
+    return {
+      valid: false,
+      totalAmount: totalDue,
+      paidAmount: safePaid,
+      discountAmount: discount,
+      remaining: Math.max(0, totalDue - safePaid),
+      changeDue: 0,
+      status: 'pending',
+      error: 'Le paiement complet est requis pour un client passager.'
+    }
+  }
+
+  const remaining = Math.max(0, totalDue - safePaid)
+  const changeDue = Math.max(0, safePaid - totalDue)
+
+  return {
+    valid: true,
+    totalAmount: totalDue,
+    paidAmount: safePaid,
+    discountAmount: discount,
+    remaining,
+    changeDue,
+    status: safePaid >= totalDue ? 'paid' : 'pending',
+    error: null
+  }
+}
+
 export const useInvoicesStore = defineStore('invoices', () => {
   const items = ref([])
   const current = ref(null) // facture en cours de création
@@ -13,12 +65,17 @@ export const useInvoicesStore = defineStore('invoices', () => {
     (current.value?.lines || []).reduce((s, l) => s + l.total_price, 0)
   )
 
+  const currentDiscount = computed(() => Number(current.value?.discount_amount || 0))
+  const currentAmountDue = computed(() => Math.max(0, currentTotal.value - currentDiscount.value))
+
   function newDraft() {
     current.value = {
       invoice_number: generateInvoiceNumber(),
       client_id: null,
       customer_name: '',
       lines: [],
+      discount_amount: 0,
+      payment_method: 'cash',
       status: 'pending'
     }
   }
@@ -93,6 +150,12 @@ export const useInvoicesStore = defineStore('invoices', () => {
     const auth = useAuthStore()
     const productsStore = useProductsStore()
 
+    const normalizedPayment = {
+      paid_amount: Number(payment?.paid_amount ?? 0),
+      discount_amount: Number(payment?.discount_amount ?? current.value.discount_amount ?? 0),
+      payment_method: payment?.payment_method || current.value.payment_method || 'cash'
+    }
+
     // 1) Client
     const defaultClients = current.value.client_id
       ? []
@@ -101,22 +164,30 @@ export const useInvoicesStore = defineStore('invoices', () => {
     const client = clientId ? await db.findById('clients', clientId) : null
     const isPassager = !client || client.name?.toLowerCase() === 'passager'
 
-    if (typeof payment.paid_amount !== 'number' || isNaN(payment.paid_amount) || payment.paid_amount < 0) {
-      throw new Error('Le montant payé est invalide.')
+    const summary = computePaymentSummary({
+      totalAmount: currentTotal.value,
+      paidAmount: normalizedPayment.paid_amount,
+      isPassager,
+      discountAmount: normalizedPayment.discount_amount
+    })
+
+    if (!summary.valid) {
+      throw new Error(summary.error)
     }
-    // Un client passager (anonyme) ne peut pas laisser de solde impayé
-    if (isPassager && payment.paid_amount < currentTotal.value) {
-      throw new Error('Le paiement complet est requis pour un client passager.')
-    }
+
+    current.value.discount_amount = normalizedPayment.discount_amount
+    current.value.payment_method = normalizedPayment.payment_method
 
     const payload = {
       invoice_number: current.value.invoice_number,
       agent_id: auth.user.id,
       client_id: clientId,
       customer_name: current.value.customer_name || null,
-      total_amount: currentTotal.value,
-      paid_amount: payment.paid_amount,
-      status: payment.paid_amount >= currentTotal.value ? 'paid' : 'pending'
+      total_amount: summary.totalAmount,
+      paid_amount: normalizedPayment.paid_amount,
+      discount_amount: normalizedPayment.discount_amount,
+      payment_method: normalizedPayment.payment_method,
+      status: summary.status
     }
 
     loading.value = true
@@ -221,7 +292,7 @@ export const useInvoicesStore = defineStore('invoices', () => {
   }
 
   return {
-    items, current, loading, currentTotal,
+    items, current, loading, currentTotal, currentDiscount, currentAmountDue,
     newDraft, addProductByBarcode, applyClientPricing, updateLine, removeLine,
     validate, fetchAll, fetchWithItems, updateStatus, remove, removeMany
   }
