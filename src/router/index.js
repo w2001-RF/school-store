@@ -23,12 +23,23 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach(async (to) => {
+let authInitPromise = null
+
+router.beforeEach(async (to, from, next) => {
   const auth = useAuthStore()
-  if (auth.loading) await auth.init()
-  if (!to.meta.public && !auth.isAuthenticated) return { name: 'login' }
-  if (to.name === 'login' && auth.isAuthenticated) return { name: 'dashboard' }
-  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) return { name: 'dashboard' }
+  
+  if (auth.loading && !authInitPromise) {
+    authInitPromise = auth.init()
+  }
+  if (authInitPromise) {
+    await authInitPromise
+  }
+  
+  if (to.meta.public) return next()
+  if (!auth.isAuthenticated) return next({ name: 'login' })
+  if (to.name === 'login' && auth.isAuthenticated) return next({ name: 'dashboard' })
+  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) return next({ name: 'dashboard' })
+  next()
 })
 
 export default router

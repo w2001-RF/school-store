@@ -32,6 +32,7 @@ export const csvImporter = {
   label: 'CSV',
   extensions: ['.csv'],
   async parse(file) {
+    if (file.size > 10 * 1024 * 1024) throw new ImportError('Fichier trop volumineux. La taille maximale est de 10 Mo.')
     const rows = parseCsv(await file.text())
     if (!rows.length) return []
     const headers = rows.shift().map(header => header.toLowerCase().replace(/[^a-z0-9]+/g, '_'))

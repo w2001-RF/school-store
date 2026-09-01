@@ -3,7 +3,7 @@
     <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
     <div class="main-area">
       <header class="topbar">
-        <button class="hamburger" @click="sidebarOpen = !sidebarOpen">☰</button>
+        <button class="hamburger" @click="sidebarOpen = !sidebarOpen" :aria-label="sidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'">☰</button>
         <h1 class="topbar-title">{{ pageTitle }}</h1>
         <div class="user-info" v-if="auth.user">
           <label class="language-picker" :title="$t('language')">
