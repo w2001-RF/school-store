@@ -57,7 +57,8 @@ export class SupabaseAdapter extends DatabaseAdapter {
       id: authUser.id,
       email: authUser.email,
       fullName: profile?.full_name || authUser.email,
-      role: profile?.role || 'agent'
+      role: profile?.role || 'agent',
+      isSuperAdmin: profile?.is_super_admin === true
     }
   }
 
@@ -191,6 +192,12 @@ export class SupabaseAdapter extends DatabaseAdapter {
    */
   async rpc(fnName, params = {}) {
     const { data, error } = await this.client.rpc(fnName, params)
+    if (error) throw error
+    return data
+  }
+
+  async invoke(functionName, body = {}) {
+    const { data, error } = await this.client.functions.invoke(functionName, { body })
     if (error) throw error
     return data
   }

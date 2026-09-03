@@ -17,6 +17,18 @@
       <router-link v-if="auth.isManager" to="/clients" class="nav-item" @click="$emit('close')">
         <span aria-hidden="true">👥</span> {{ $t('nav.clients') }}
       </router-link>
+      <router-link v-if="auth.isManager" to="/reports" class="nav-item" @click="$emit('close')">
+        <span aria-hidden="true">📊</span> {{ $t('nav.reports') }}
+      </router-link>
+      <router-link v-if="auth.isAgent" to="/team" class="nav-item" @click="$emit('close')">
+        <span aria-hidden="true">👥</span> {{ $t('nav.team') }}
+      </router-link>
+      <router-link v-if="auth.isSuperAdmin" to="/organizations" class="nav-item" @click="$emit('close')">
+        <span aria-hidden="true">🏢</span> {{ $t('organizations.title') }}
+      </router-link>
+      <router-link to="/profile" class="nav-item" @click="$emit('close')">
+        <span aria-hidden="true">👤</span> {{ $t('profile.title') }}
+      </router-link>
       <router-link to="/invoices/new" class="nav-item" @click="$emit('close')">
         <span aria-hidden="true">🧾</span> {{ $t('nav.newInvoice') }}
       </router-link>

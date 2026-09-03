@@ -45,6 +45,10 @@
         <div class="stat-icon">⏳</div>
         <div class="stat-info"><div class="stat-value">{{ stats.pending }}</div><div class="stat-label">{{ $t('dashboard.pending') }}</div></div>
       </div>
+      <div v-if="auth.isManager" class="stat-card" :class="{ highlight: stats.lowStock > 0 }">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-info"><div class="stat-value">{{ stats.lowStock }}</div><div class="stat-label">{{ $t('dashboard.lowStock') }}</div></div>
+      </div>
     </div>
     <div class="quick-actions">
       <router-link to="/invoices/new" class="action-card">
@@ -62,7 +66,19 @@
       <router-link v-if="auth.isManager" to="/clients" class="action-card">
         <span class="action-icon">👥</span><span>{{ $t('dashboard.manageClients') }}</span>
       </router-link>
+      <router-link v-if="auth.isManager" to="/reports" class="action-card">
+        <span class="action-icon">📊</span><span>{{ $t('nav.reports') }}</span>
+      </router-link>
     </div>
+    <section v-if="auth.isManager && lowStockProducts.length" class="history low-stock-alert">
+      <div class="section-head"><h3>⚠️ {{ $t('dashboard.lowStock') }}</h3><router-link to="/products">{{ $t('actions.viewAll') }}</router-link></div>
+      <div class="invoice-list">
+        <router-link v-for="product in lowStockProducts" :key="product.id" to="/products" class="invoice-row">
+          <span><strong>{{ product.name }}</strong></span>
+          <span>{{ product.stock }} {{ $t('productsView.inStock') }}</span>
+        </router-link>
+      </div>
+    </section>
     <section class="history">
       <div class="section-head"><h3>{{ $t('actions.recent') }}</h3><div class="section-actions"><button type="button" :disabled="loading" :title="$t('actions.refresh')" @click="refreshDashboard">↻ {{ $t('actions.refresh') }}</button><router-link to="/invoices">{{ $t('actions.viewAll') }}</router-link></div></div>
       <div v-if="recentInvoices.length === 0" class="empty">{{ $t('dashboard.noInvoices') }}</div>
@@ -81,13 +97,15 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { db } from '../services/database/index.js'
+import { isLowStock } from '../stores/products.js'
 import { formatMoney } from '../utils/format.js'
 import { useI18n } from 'vue-i18n'
 
 const auth = useAuthStore()
 const { t } = useI18n()
-const stats = ref({ products: 0, categories: 0, clients: 0, invoices: 0, pending: 0, totalRevenue: 0 })
+const stats = ref({ products: 0, categories: 0, clients: 0, invoices: 0, pending: 0, totalRevenue: 0, lowStock: 0 })
 const recentInvoices = ref([])
+const lowStockProducts = ref([])
 const loading = ref(false)
 
 onMounted(refreshDashboard)
@@ -95,7 +113,11 @@ onMounted(refreshDashboard)
 async function refreshDashboard() {
   loading.value = true
   try {
-  stats.value.products = await db.count('products')
+  const products = await db.find('products')
+  stats.value.products = products.length
+  const lowStock = products.filter(isLowStock)
+  stats.value.lowStock = lowStock.length
+  lowStockProducts.value = lowStock.slice(0, 8)
   stats.value.categories = await db.count('categories')
   stats.value.clients = await db.count('clients')
   const invoices = await db.find('invoices')

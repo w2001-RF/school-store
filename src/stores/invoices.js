@@ -282,6 +282,13 @@ export const useInvoicesStore = defineStore('invoices', () => {
           } else {
             // Option B : UPDATE direct, tolère les échecs RLS
             await db.update('products', line.product_id, { stock: newStock }, { throwIfMissing: false })
+            await productsStore.logStockAdjustment({
+              productId: line.product_id,
+              delta: -line.quantity,
+              reason: 'sale',
+              invoiceId: invoice.id,
+              changedBy: auth.user?.id
+            })
           }
         } catch (e) {
           console.warn(`[stock] Échec décrémentation pour ${line.product_name} :`, e.message)
@@ -332,6 +339,43 @@ export const useInvoicesStore = defineStore('invoices', () => {
     return updated
   }
 
+  // Retour d'articles : remet le stock, ne touche pas aux montants de la facture (pas de note de crédit)
+  async function returnItems(invoiceId, returns) {
+    if (!returns?.length) throw new Error('Aucun article à retourner')
+    const productsStore = useProductsStore()
+    const auth = useAuthStore()
+
+    for (const { itemId, productId, quantity } of returns) {
+      const qty = Number(quantity)
+      if (!qty || qty <= 0) continue
+
+      const item = await db.findById('invoice_items', itemId)
+      if (!item) throw new Error('Ligne de facture introuvable')
+      const alreadyReturned = Number(item.returned_quantity || 0)
+      const maxReturnable = Number(item.quantity) - alreadyReturned
+      if (qty > maxReturnable) {
+        throw new Error(`Quantité de retour invalide pour "${item.product_name}" (max ${maxReturnable})`)
+      }
+
+      await db.update('invoice_items', itemId, { returned_quantity: alreadyReturned + qty })
+
+      const product = await db.findById('products', productId)
+      if (product) {
+        await db.update('products', productId, { stock: product.stock + qty }, { throwIfMissing: false })
+      }
+      await productsStore.logStockAdjustment({
+        productId,
+        delta: qty,
+        reason: 'return',
+        invoiceId,
+        changedBy: auth.user?.id
+      })
+    }
+
+    await productsStore.fetchAll()
+    return await fetchWithItems(invoiceId)
+  }
+
   async function remove(id) {
     await db.delete('invoices', id)
     items.value = items.value.filter(invoice => invoice.id !== id)
@@ -346,6 +390,6 @@ export const useInvoicesStore = defineStore('invoices', () => {
   return {
     items, current, loading, currentTotal, currentDiscount, currentAmountDue,
     newDraft, addProductByBarcode, applyClientPricing, updateLine, removeLine,
-    validate, fetchAll, fetchWithItems, updateStatus, remove, removeMany
+    validate, fetchAll, fetchWithItems, updateStatus, returnItems, remove, removeMany
   }
 })
