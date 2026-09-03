@@ -117,6 +117,7 @@ export class SQLiteAdapter extends DatabaseAdapter {
         barcode TEXT UNIQUE,
         price REAL NOT NULL CHECK (price >= 0),
         stock INTEGER DEFAULT 0 CHECK (stock >= 0),
+        low_stock_threshold INTEGER,
         category_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
         image_url TEXT,
         active INTEGER DEFAULT 1,
@@ -145,7 +146,8 @@ export class SQLiteAdapter extends DatabaseAdapter {
         product_barcode TEXT,
         quantity INTEGER NOT NULL CHECK (quantity > 0),
         unit_price REAL NOT NULL,
-        total_price REAL NOT NULL
+        total_price REAL NOT NULL,
+        returned_quantity INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE payments (
         id TEXT PRIMARY KEY,
@@ -157,11 +159,21 @@ export class SQLiteAdapter extends DatabaseAdapter {
         paid_at TEXT DEFAULT (datetime('now')),
         created_at TEXT DEFAULT (datetime('now'))
       );
+      CREATE TABLE stock_adjustments (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        invoice_id TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+        changed_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+        quantity_delta INTEGER NOT NULL,
+        reason TEXT NOT NULL DEFAULT 'sale',
+        created_at TEXT DEFAULT (datetime('now'))
+      );
       CREATE INDEX idx_products_barcode ON products(barcode);
       CREATE INDEX idx_invoices_agent ON invoices(agent_id);
       CREATE INDEX idx_invoices_status ON invoices(status);
       CREATE INDEX idx_invoice_items_invoice ON invoice_items(invoice_id);
       CREATE INDEX idx_payments_invoice ON payments(invoice_id);
+      CREATE INDEX idx_stock_adjustments_product ON stock_adjustments(product_id);
 
       CREATE TRIGGER trg_products_updated AFTER UPDATE ON products
       BEGIN UPDATE products SET updated_at = datetime('now') WHERE id = NEW.id; END;
@@ -173,6 +185,10 @@ export class SQLiteAdapter extends DatabaseAdapter {
       const columns = this.db.exec('PRAGMA table_info(profiles)')[0]?.values || []
       const hasPasswordHash = columns.some(([,, name]) => name === 'password_hash')
       if (!hasPasswordHash) this.db.run('ALTER TABLE profiles ADD COLUMN password_hash TEXT')
+      const productColumns = this.db.exec('PRAGMA table_info(products)')[0]?.values || []
+      if (!productColumns.some(([,, name]) => name === 'low_stock_threshold')) {
+        this.db.run('ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER')
+      }
       this.db.run(
         'UPDATE profiles SET password_hash = ? WHERE email = ? AND password_hash IS NULL',
         [this._hashPassword('demo1234'), 'manager@demo.com']
@@ -208,6 +224,10 @@ export class SQLiteAdapter extends DatabaseAdapter {
       if (!invoiceColumns.some(([,, name]) => name === 'payment_method')) {
         this.db.run('ALTER TABLE invoices ADD COLUMN payment_method TEXT NOT NULL DEFAULT "cash"')
       }
+      const invoiceItemColumns = this.db.exec('PRAGMA table_info(invoice_items)')[0]?.values || []
+      if (!invoiceItemColumns.some(([,, name]) => name === 'returned_quantity')) {
+        this.db.run('ALTER TABLE invoice_items ADD COLUMN returned_quantity INTEGER NOT NULL DEFAULT 0')
+      }
       this.db.run(`CREATE TABLE IF NOT EXISTS payments (
         id TEXT PRIMARY KEY,
         invoice_id TEXT NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
@@ -219,6 +239,16 @@ export class SQLiteAdapter extends DatabaseAdapter {
         created_at TEXT DEFAULT (datetime('now'))
       )`)
       this.db.run('CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id)')
+      this.db.run(`CREATE TABLE IF NOT EXISTS stock_adjustments (
+        id TEXT PRIMARY KEY,
+        product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        invoice_id TEXT REFERENCES invoices(id) ON DELETE SET NULL,
+        changed_by TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+        quantity_delta INTEGER NOT NULL,
+        reason TEXT NOT NULL DEFAULT 'sale',
+        created_at TEXT DEFAULT (datetime('now'))
+      )`)
+      this.db.run('CREATE INDEX IF NOT EXISTS idx_stock_adjustments_product ON stock_adjustments(product_id)')
       this.db.run(
         `INSERT INTO clients (id, name, discount_percent)
          SELECT ?, 'Passager', 0

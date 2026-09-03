@@ -21,6 +21,7 @@
           </select>
         </label>
         <button type="button" class="icon-action danger" :title="$t('detail.delete')" :aria-label="$t('detail.delete')" @click.prevent="deleteInvoice()">🗑️</button>
+        <button type="button" class="icon-action" :title="$t('detail.returnItems')" :aria-label="$t('detail.returnItems')" :disabled="!hasReturnableItems" @click="openReturn">↩️</button>
       </div>
       <button class="btn-refresh-detail" type="button" :disabled="refreshing" :title="$t('actions.refresh')" @click="refreshInvoice">↻ {{ $t('actions.refresh') }}</button>
       <table class="items">
@@ -30,7 +31,7 @@
         <tbody>
           <tr v-for="item in invoice.items" :key="item.id">
             <td>{{ item.product_name }}</td>
-            <td>{{ item.quantity }}</td>
+            <td>{{ item.quantity }}<small v-if="item.returned_quantity"> ({{ $t('detail.returned', { count: item.returned_quantity }) }})</small></td>
             <td>{{ formatMoney(item.unit_price) }}</td>
             <td>{{ formatMoney(item.total_price) }}</td>
           </tr>
@@ -40,7 +41,7 @@
           <tr v-if="discountAmount > 0"><td colspan="3">{{ $t('detail.discount') }}</td><td>-{{ formatMoney(discountAmount) }}</td></tr>
           <tr><td colspan="3"><strong>{{ $t('detail.total') }}</strong></td><td><strong>{{ formatMoney(invoice.total_amount) }}</strong></td></tr>
           <tr><td colspan="3">{{ $t('detail.paid') }}</td><td>{{ formatMoney(invoice.paid_amount) }}</td></tr>
-          <tr v-if="remainingAmount > 0"><td colspan="3">{{ $t('detail.remaining') }}</td><td>{{ formatMoney(remainingAmount) }}</td></tr>
+          <tr v-if="remainingAmountValue > 0"><td colspan="3">{{ $t('detail.remaining') }}</td><td>{{ formatMoney(remainingAmountValue) }}</td></tr>
         </tfoot>
       </table>
       <section class="payment-history">
@@ -66,6 +67,25 @@
       </div>
     </div>
   </div>
+  <Modal v-if="showReturn" :title="$t('detail.returnItems')" @close="showReturn = false">
+    <form @submit.prevent="submitReturn">
+      <div v-for="item in returnableItems" :key="item.id" class="form-group">
+        <label>{{ item.product_name }} ({{ $t('detail.returnMax', { max: item.maxReturnable }) }})</label>
+        <input
+          v-model.number="returnQuantities[item.id]"
+          type="number"
+          min="0"
+          :max="item.maxReturnable"
+        />
+      </div>
+      <p v-if="!returnableItems.length" class="empty-payments">{{ $t('detail.noReturnableItems') }}</p>
+      <div v-if="returnError" class="error" aria-live="polite" role="alert">{{ returnError }}</div>
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" @click="showReturn = false">{{ $t('common.cancel') }}</button>
+        <button type="submit" class="btn-confirm-delete" :disabled="!returnableItems.length">{{ $t('detail.confirmReturn') }}</button>
+      </div>
+    </form>
+  </Modal>
 </template>
 
 <script setup>
@@ -73,20 +93,30 @@ import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useInvoicesStore } from '../stores/invoices.js'
 import { useAuthStore } from '../stores/auth.js'
-import { formatMoney, formatDate } from '../utils/format.js'
+import { useToast } from '../composables/useToast.js'
+import { formatMoney, formatDate, remainingAmount } from '../utils/format.js'
+import Modal from '../components/common/Modal.vue'
 import { useI18n } from 'vue-i18n'
 
 const route = useRoute()
 const router = useRouter()
 const invoices = useInvoicesStore()
 const auth = useAuthStore()
+const toast = useToast()
 const { t } = useI18n()
 const invoice = ref(null)
 const showDeleteConfirmation = ref(false)
 const refreshing = ref(false)
+const showReturn = ref(false)
+const returnQuantities = ref({})
+const returnError = ref('')
 const subtotalAmount = computed(() => Number(invoice.value?.subtotal_amount) || (invoice.value?.items || []).reduce((total, item) => total + Number(item.total_price || 0), 0))
 const discountAmount = computed(() => Number(invoice.value?.discount_amount || 0))
-const remainingAmount = computed(() => Number(invoice.value?.remaining_amount ?? Math.max(0, Number(invoice.value?.total_amount || 0) - Number(invoice.value?.paid_amount || 0))))
+const remainingAmountValue = computed(() => remainingAmount(invoice.value))
+const returnableItems = computed(() => (invoice.value?.items || [])
+  .map(item => ({ ...item, maxReturnable: Number(item.quantity) - Number(item.returned_quantity || 0) }))
+  .filter(item => item.maxReturnable > 0))
+const hasReturnableItems = computed(() => returnableItems.value.length > 0)
 onMounted(async () => { invoice.value = await invoices.fetchWithItems(route.params.id) })
 
 async function refreshInvoice() {
@@ -97,7 +127,7 @@ async function refreshInvoice() {
 
 function printInvoice() {
   if (typeof window === 'undefined' || typeof window.print !== 'function') {
-    alert('Impression indisponible dans ce navigateur')
+    toast.error('Impression indisponible dans ce navigateur')
     return
   }
   window.print()
@@ -106,7 +136,28 @@ function printInvoice() {
 async function changeStatus(status) {
   try {
     invoice.value = { ...invoice.value, ...(await invoices.updateStatus(invoice.value.id, status)) }
-  } catch (error) { alert(error.message) }
+  } catch (error) { toast.error(error.message) }
+}
+
+function openReturn() {
+  returnQuantities.value = Object.fromEntries(returnableItems.value.map(item => [item.id, 0]))
+  returnError.value = ''
+  showReturn.value = true
+}
+
+async function submitReturn() {
+  returnError.value = ''
+  const returns = returnableItems.value
+    .map(item => ({ itemId: item.id, productId: item.product_id, quantity: Number(returnQuantities.value[item.id] || 0) }))
+    .filter(entry => entry.quantity > 0)
+  if (!returns.length) {
+    returnError.value = t('detail.noReturnableItems')
+    return
+  }
+  try {
+    invoice.value = await invoices.returnItems(invoice.value.id, returns)
+    showReturn.value = false
+  } catch (error) { returnError.value = error.message }
 }
 
 function deleteInvoice() {
@@ -118,7 +169,7 @@ async function confirmDeleteInvoice() {
   try {
     await invoices.remove(invoice.value.id)
     await router.replace({ name: 'invoices' })
-  } catch (error) { alert(error?.message || 'Impossible de supprimer la facture') }
+  } catch (error) { toast.error(error?.message || 'Impossible de supprimer la facture') }
 }
 
 function paymentMethodLabel(method) {
@@ -163,6 +214,13 @@ function paymentMethodLabel(method) {
 .confirmation-actions button { padding: 9px 14px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; }
 .btn-cancel { background: white; color: #374151; }
 .btn-confirm-delete { background: #dc2626; color: white; border-color: #dc2626 !important; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; margin-bottom: 4px; font-size: 0.9rem; }
+.form-group input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.form-actions button { padding: 9px 14px; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; }
+.form-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.error { margin: 0 0 12px; color: #b91c1c; background: #fef2f2; padding: 8px; border-radius: 6px; }
 
 @media print {
   @page { size: 80mm auto; margin: 0; }

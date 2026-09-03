@@ -19,12 +19,13 @@
         <img v-if="p.image_url" :src="p.image_url" :alt="p.name" class="product-image" />
         <div class="product-head">
           <h3>{{ p.name }}</h3>
-          <span class="badge" :class="{ low: p.stock < 10 }">{{ p.stock }} {{ $t('productsView.inStock') }}</span>
+          <span class="badge" :class="{ low: isLowStock(p) }">{{ p.stock }} {{ $t('productsView.inStock') }}</span>
         </div>
         <p class="barcode">📊 {{ p.barcode }}</p>
         <p class="category" v-if="getCategoryName(p.category_id)">🏷️ {{ getCategoryName(p.category_id) }}</p>
         <p class="price">{{ formatMoney(p.price) }}</p>
         <div class="actions">
+          <button v-if="auth.isManager" class="btn-icon" :title="$t('productsView.adjustStock')" :aria-label="$t('productsView.adjustStock')" @click="openAdjust(p)">🔧</button>
           <button class="btn-icon" @click="openForm(p)">✏️</button>
           <button class="btn-icon danger" @click="requestDelete(p)">🗑️</button>
         </div>
@@ -55,6 +56,11 @@
             <label>{{ $t('common.stock') }}</label>
             <input v-model.number="form.stock" type="number" min="0" />
           </div>
+        </div>
+        <div class="form-group">
+          <label>{{ $t('productsView.lowStockThreshold') }}</label>
+          <input v-model.number="form.low_stock_threshold" type="number" min="0" :placeholder="String(defaultLowStockThreshold)" />
+          <small class="field-hint">{{ $t('productsView.lowStockThresholdHint') }}</small>
         </div>
         <div class="form-group">
           <label>{{ $t('common.category') }}</label>
@@ -97,15 +103,46 @@
     <Modal v-if="showScanner" :title="scannerTarget === 'form' ? $t('productsView.scanBarcode') : $t('productsView.scanProduct')" @close="showScanner = false">
       <BarcodeScanner @scan="handleScan" />
     </Modal>
+    <Modal v-if="adjustTarget" :title="$t('productsView.adjustStockTitle', { name: adjustTarget.name })" @close="adjustTarget = null">
+      <form @submit.prevent="submitAdjust">
+        <div class="form-group">
+          <label>{{ $t('productsView.adjustCurrentStock') }}</label>
+          <input :value="adjustTarget.stock" type="number" disabled />
+        </div>
+        <div class="form-group">
+          <label>{{ $t('productsView.adjustQuantity') }} *</label>
+          <input v-model.number="adjustForm.delta" type="number" required />
+          <small class="field-hint">{{ $t('productsView.adjustQuantityHint') }}</small>
+        </div>
+        <div class="form-group">
+          <label>{{ $t('productsView.adjustReason') }}</label>
+          <select v-model="adjustForm.reason">
+            <option value="correction">{{ $t('productsView.reasonCorrection') }}</option>
+            <option value="restock">{{ $t('productsView.reasonRestock') }}</option>
+            <option value="damage">{{ $t('productsView.reasonDamage') }}</option>
+            <option value="loss">{{ $t('productsView.reasonLoss') }}</option>
+            <option value="other">{{ $t('productsView.reasonOther') }}</option>
+          </select>
+        </div>
+        <div v-if="adjustError" class="error" aria-live="polite" role="alert">{{ adjustError }}</div>
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" @click="adjustTarget = null">{{ $t('common.cancel') }}</button>
+          <button type="submit" class="btn-primary">{{ $t('productsView.adjustSubmit') }}</button>
+        </div>
+      </form>
+    </Modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useProductsStore } from '../stores/products.js'
+import { useProductsStore, isLowStock } from '../stores/products.js'
 import { useCategoriesStore } from '../stores/categories.js'
+import { useAuthStore } from '../stores/auth.js'
 import { db } from '../services/database/index.js'
 import { formatMoney } from '../utils/format.js'
+import { APP_CONFIG } from '../config/index.js'
+import { useToast } from '../composables/useToast.js'
 import Modal from '../components/common/Modal.vue'
 import BulkImportModal from '../components/common/BulkImportModal.vue'
 import Pagination from '../components/common/Pagination.vue'
@@ -116,7 +153,10 @@ import { useI18n } from 'vue-i18n'
 
 const store = useProductsStore()
 const categoriesStore = useCategoriesStore()
+const auth = useAuthStore()
+const toast = useToast()
 const { t } = useI18n()
+const defaultLowStockThreshold = APP_CONFIG.lowStockThreshold
 const search = ref('')
 const debouncedSearch = useDebouncedRef(search, 300)
 const showForm = ref(false)
@@ -128,6 +168,9 @@ const selectedIds = ref(new Set())
 const deleteConfirmation = ref(false)
 const deleteTarget = ref(null)
 const formError = ref('')
+const adjustTarget = ref(null)
+const adjustForm = ref({ delta: 0, reason: 'correction' })
+const adjustError = ref('')
 const productFields = { name: ['name', 'nom'], barcode: ['barcode', 'code_barres', 'codebarres'], price: ['price', 'prix'], stock: ['stock'], category_id: ['category_id', 'categorie_id', 'categorie', 'category'], image_url: ['image_url', 'image'] }
 
 onMounted(async () => {
@@ -203,7 +246,7 @@ async function confirmBulkDelete() {
     await store.removeMany(idsToRemove)
     selectedIds.value = new Set([...selectedIds.value].filter(id => !currentPageIds.has(id)))
     deleteConfirmation.value = false
-  } catch (error) { alert(error.message) }
+  } catch (error) { toast.error(error.message) }
 }
 
 function getCategoryName(id) {
@@ -213,7 +256,7 @@ function getCategoryName(id) {
 function openForm(p = null) {
   form.value = p
     ? { ...p }
-    : { name: '', barcode: '', price: 0, stock: 0, category_id: null, description: '', image_url: '' }
+    : { name: '', barcode: '', price: 0, stock: 0, low_stock_threshold: null, category_id: null, description: '', image_url: '' }
   formError.value = ''
   showForm.value = true
 }
@@ -286,6 +329,25 @@ function requestDelete(p) {
 async function confirmDelete() {
   await store.remove(deleteTarget.value.id)
   deleteTarget.value = null
+}
+
+function openAdjust(p) {
+  adjustTarget.value = p
+  adjustForm.value = { delta: 0, reason: 'correction' }
+  adjustError.value = ''
+}
+
+async function submitAdjust() {
+  adjustError.value = ''
+  const delta = Number(adjustForm.value.delta)
+  if (!delta) {
+    adjustError.value = t('productsView.adjustQuantityHint')
+    return
+  }
+  try {
+    await store.adjustStock(adjustTarget.value.id, delta, adjustForm.value.reason)
+    adjustTarget.value = null
+  } catch (e) { adjustError.value = e.message }
 }
 </script>
 

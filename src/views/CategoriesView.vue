@@ -58,12 +58,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useCategoriesStore } from '../stores/categories.js'
+import { useToast } from '../composables/useToast.js'
 import Modal from '../components/common/Modal.vue'
 import BulkImportModal from '../components/common/BulkImportModal.vue'
 import Pagination from '../components/common/Pagination.vue'
 import { usePagination } from '../composables/usePagination.js'
 
 const store = useCategoriesStore()
+const toast = useToast()
 const showForm = ref(false)
 const showBulk = ref(false)
 const form = ref({})
@@ -112,7 +114,7 @@ async function confirmBulkDelete() {
     await store.removeMany(idsToRemove)
     selectedIds.value = new Set([...selectedIds.value].filter(id => !currentPageIds.has(id)))
     deleteConfirmation.value = false
-  } catch (error) { alert(error.message) }
+  } catch (error) { toast.error(error.message) }
 }
 
 function openForm(c = null) {

@@ -2,6 +2,31 @@
 -- SCHOOL STORE - Schéma Supabase
 -- ============================================
 
+-- Organisations (multi-tenant : chaque business est isolé par organization_id)
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE,
+  legal_name TEXT,
+  phone TEXT,
+  email TEXT,
+  address TEXT,
+  city TEXT,
+  country TEXT,
+  tax_number TEXT,
+  logo_url TEXT,
+  currency TEXT NOT NULL DEFAULT 'EUR',
+  timezone TEXT NOT NULL DEFAULT 'UTC',
+  status TEXT NOT NULL CHECK (status IN ('active','suspended','pending','cancelled')) DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- UUID fixe de l'organisation par défaut (absorbe les données mono-tenant existantes)
+INSERT INTO organizations (id, name, slug, status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Default Organization', 'default', 'active')
+ON CONFLICT (id) DO NOTHING;
+
 -- Profils utilisateurs (lié à auth.users)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -9,7 +34,20 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   role TEXT NOT NULL CHECK (role IN ('manager', 'agent')) DEFAULT 'agent',
   active BOOLEAN DEFAULT true,
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Rattachement utilisateur <-> organisation (rôles SaaS granulaires)
+CREATE TABLE IF NOT EXISTS organization_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('owner','manager','cashier','stock_manager','accountant','viewer')) DEFAULT 'cashier',
+  status TEXT NOT NULL CHECK (status IN ('active','invited','suspended')) DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(organization_id, user_id)
 );
 
 -- Catégories de produits
@@ -17,6 +55,7 @@ CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
   description TEXT,
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -29,9 +68,11 @@ CREATE TABLE IF NOT EXISTS clients (
   address TEXT,
   notes TEXT,
   discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0 CHECK (discount_percent >= 0 AND discount_percent <= 100);
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001';
 INSERT INTO clients (name, discount_percent)
 SELECT 'Passager', 0
 WHERE NOT EXISTS (SELECT 1 FROM clients WHERE LOWER(name) = 'passager');
@@ -44,9 +85,11 @@ CREATE TABLE IF NOT EXISTS products (
   barcode TEXT UNIQUE,
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
   stock INTEGER DEFAULT 0 CHECK (stock >= 0),
+  low_stock_threshold INTEGER,
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   image_url TEXT,
   active BOOLEAN DEFAULT true,
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -64,17 +107,20 @@ CREATE TABLE IF NOT EXISTS invoices (
   payment_method TEXT NOT NULL DEFAULT 'cash',
   status TEXT NOT NULL CHECK (status IN ('pending','paid','cancelled')) DEFAULT 'pending',
   notes TEXT,
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES clients(id) ON DELETE SET NULL;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0);
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS payment_method TEXT NOT NULL DEFAULT 'cash';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001';
 
 CREATE TABLE IF NOT EXISTS client_product_prices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   UNIQUE(client_id, product_id)
 );
 
@@ -87,7 +133,9 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   product_barcode TEXT,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_price DECIMAL(10,2) NOT NULL,
-  total_price DECIMAL(10,2) NOT NULL
+  total_price DECIMAL(10,2) NOT NULL,
+  returned_quantity INTEGER NOT NULL DEFAULT 0,
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001'
 );
 
 -- Index
@@ -96,17 +144,28 @@ CREATE INDEX IF NOT EXISTS idx_invoices_agent ON invoices(agent_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
 
--- Trigger: auto-création du profil après inscription
+-- Trigger: auto-création du profil après inscription (+ adhésion à l'organisation par défaut)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+  default_org_id CONSTANT UUID := '00000000-0000-0000-0000-000000000001';
+  new_role TEXT;
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, role)
+  new_role := COALESCE(NEW.raw_user_meta_data->>'role', 'agent');
+
+  INSERT INTO public.profiles (id, email, full_name, role, organization_id)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'agent')
+    new_role,
+    default_org_id
   );
+
+  INSERT INTO public.organization_members (organization_id, user_id, role)
+  VALUES (default_org_id, NEW.id, CASE WHEN new_role = 'manager' THEN 'manager' ELSE 'cashier' END)
+  ON CONFLICT (organization_id, user_id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -141,12 +200,62 @@ ALTER TABLE client_product_prices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
 
 -- Helper: récupérer le rôle de l'utilisateur courant
 CREATE OR REPLACE FUNCTION public.current_user_role()
 RETURNS TEXT AS $$
   SELECT role FROM public.profiles WHERE id = auth.uid();
 $$ LANGUAGE SQL STABLE;
+
+-- Helper (Phase 1 SaaS, pas encore utilisé par les policies existantes) :
+-- organisation de l'utilisateur courant, pour le futur resserrement des RLS.
+CREATE OR REPLACE FUNCTION public.current_user_organization_id()
+RETURNS UUID AS $$
+  SELECT organization_id FROM public.organization_members
+  WHERE user_id = auth.uid() AND status = 'active'
+  LIMIT 1;
+$$ LANGUAGE SQL STABLE;
+
+-- Organisations : un membre ne voit que son organisation
+CREATE POLICY "Members can read their organization" ON organizations
+  FOR SELECT USING (
+    id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())
+  );
+
+-- Rattachements : un membre voit sa propre ligne ; owner/manager voient toute l'organisation
+CREATE POLICY "Members can read their membership rows" ON organization_members
+  FOR SELECT USING (
+    user_id = auth.uid()
+    OR organization_id IN (
+      SELECT organization_id FROM organization_members
+      WHERE user_id = auth.uid() AND role IN ('owner','manager')
+    )
+  );
+
+-- Rattachements : owner/manager peuvent modifier le rôle/statut des membres de leur organisation
+-- (garde-fou : seul un 'owner' existant peut promouvoir un membre au rôle 'owner')
+CREATE POLICY "Owners and managers can update members in their org" ON organization_members
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM organization_members actor
+      WHERE actor.user_id = auth.uid()
+        AND actor.organization_id = organization_members.organization_id
+        AND actor.role IN ('owner', 'manager')
+        AND actor.status = 'active'
+    )
+  )
+  WITH CHECK (
+    role <> 'owner'
+    OR EXISTS (
+      SELECT 1 FROM organization_members actor
+      WHERE actor.user_id = auth.uid()
+        AND actor.organization_id = organization_members.organization_id
+        AND actor.role = 'owner'
+        AND actor.status = 'active'
+    )
+  );
 
 -- Profils
 CREATE POLICY "Users can read all profiles" ON profiles
@@ -222,6 +331,7 @@ CREATE TABLE IF NOT EXISTS stock_adjustments (
   changed_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   quantity_delta INTEGER NOT NULL,
   reason TEXT NOT NULL DEFAULT 'sale',
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -244,6 +354,7 @@ CREATE TABLE IF NOT EXISTS payments (
   recorded_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
   method TEXT NOT NULL DEFAULT 'cash',
+  organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

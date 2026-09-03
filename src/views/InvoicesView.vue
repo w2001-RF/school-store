@@ -111,6 +111,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useInvoicesStore } from '../stores/invoices.js'
 import { useAuthStore } from '../stores/auth.js'
+import { useToast } from '../composables/useToast.js'
 import { formatMoney, formatDate } from '../utils/format.js'
 import { useI18n } from 'vue-i18n'
 import Pagination from '../components/common/Pagination.vue'
@@ -118,6 +119,7 @@ import { usePagination } from '../composables/usePagination.js'
 
 const store = useInvoicesStore()
 const auth = useAuthStore()
+const toast = useToast()
 const { t } = useI18n()
 const search = ref('')
 const statusFilter = ref('')
@@ -153,7 +155,7 @@ function statusLabel(s) {
 
 async function changeStatus(invoice, status) {
   try { await store.updateStatus(invoice.id, status) }
-  catch (error) { alert(error.message) }
+  catch (error) { toast.error(error.message) }
 }
 
 function deleteInvoice(invoice) {
@@ -188,7 +190,7 @@ async function confirmDeletion() {
     } else {
       await store.remove(confirmation.id)
     }
-  } catch (error) { alert(error.message) }
+  } catch (error) { toast.error(error.message) }
 }
 </script>
 

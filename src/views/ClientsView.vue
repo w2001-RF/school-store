@@ -17,14 +17,32 @@
         <p v-if="client.phone">📞 {{ client.phone }}</p>
         <p v-if="client.address">📍 {{ client.address }}</p>
         <p v-if="client.notes" class="notes">📝 {{ client.notes }}</p>
+        <p v-if="balanceFor(client.id) > 0" class="balance-due">💳 {{ $t('clientsView.balanceDue') }} : {{ formatMoney(balanceFor(client.id)) }}</p>
         <div class="actions">
           <button class="icon-button" title="Modifier le client" :aria-label="`Modifier ${client.name}`" @click="openForm(client)">✏️</button>
           <button class="icon-button" title="Gérer les tarifs produits" :aria-label="`Gérer les tarifs de ${client.name}`" @click="openPricing(client)">💶</button>
+          <button class="icon-button" :title="$t('clientsView.statement')" :aria-label="`${$t('clientsView.statement')} ${client.name}`" @click="openStatement(client)">📄</button>
           <button class="icon-button danger" title="Supprimer le client" :aria-label="`Supprimer ${client.name}`" @click="requestRemove(client)">🗑️</button>
         </div>
       </article>
     </div>
     <Pagination :page="page" :total-pages="totalPages" :total-items="filtered.length" :page-size="pageSize" @change="goToPage" @update:page-size="changePageSize" />
+
+    <Modal v-if="statementTarget" :title="$t('clientsView.statementTitle', { name: statementTarget.name })" @close="statementTarget = null">
+      <p v-if="!unpaidInvoicesFor(statementTarget.id).length" class="empty-payments">{{ $t('clientsView.statementEmpty') }}</p>
+      <template v-else>
+        <ul class="statement-list">
+          <li v-for="invoice in unpaidInvoicesFor(statementTarget.id)" :key="invoice.id">
+            <router-link :to="`/invoices/${invoice.id}`" @click="statementTarget = null">
+              <span><strong>{{ invoice.invoice_number }}</strong><small>{{ formatDate(invoice.created_at) }}</small></span>
+              <strong>{{ formatMoney(remainingAmount(invoice)) }}</strong>
+            </router-link>
+          </li>
+        </ul>
+        <div class="statement-total">{{ $t('clientsView.balanceDue') }} : <strong>{{ formatMoney(balanceFor(statementTarget.id)) }}</strong></div>
+      </template>
+    </Modal>
+
 
     <Modal v-if="showForm" @close="showForm = false" :title="form.id ? $t('clientsView.edit') : $t('clientsView.new')">
       <form @submit.prevent="save">
@@ -66,6 +84,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useClientsStore } from '../stores/clients.js'
 import { useProductsStore } from '../stores/products.js'
+import { useInvoicesStore } from '../stores/invoices.js'
+import { useToast } from '../composables/useToast.js'
+import { formatMoney, formatDate, remainingAmount } from '../utils/format.js'
 import { db } from '../services/database/index.js'
 import Modal from '../components/common/Modal.vue'
 import BulkImportModal from '../components/common/BulkImportModal.vue'
@@ -74,6 +95,8 @@ import { usePagination } from '../composables/usePagination.js'
 
 const store = useClientsStore()
 const products = useProductsStore()
+const invoices = useInvoicesStore()
+const toast = useToast()
 const search = ref('')
 const showForm = ref(false)
 const showBulk = ref(false)
@@ -82,12 +105,25 @@ const showPricing = ref(false)
 const pricing = ref({ clientId: '', clientName: '', productId: '', price: 0 })
 const formError = ref('')
 const deleteTarget = ref(null)
+const statementTarget = ref(null)
 const clientFields = { name: ['name', 'nom'], email: ['email', 'e_mail'], phone: ['phone', 'telephone', 'tel'], address: ['address', 'adresse'], notes: ['notes', 'note'], discount_percent: ['discount_percent', 'discount', 'remise'] }
 
-onMounted(() => Promise.all([store.fetchAll(), products.fetchAll()]))
+onMounted(() => Promise.all([store.fetchAll(), products.fetchAll(), invoices.fetchAll()]))
 
 async function refreshClients() {
-  await Promise.all([store.fetchAll(), products.fetchAll()])
+  await Promise.all([store.fetchAll(), products.fetchAll(), invoices.fetchAll()])
+}
+
+function unpaidInvoicesFor(clientId) {
+  return invoices.items.filter(invoice => invoice.client_id === clientId && invoice.status !== 'cancelled' && remainingAmount(invoice) > 0)
+}
+
+function balanceFor(clientId) {
+  return unpaidInvoicesFor(clientId).reduce((sum, invoice) => sum + remainingAmount(invoice), 0)
+}
+
+function openStatement(client) {
+  statementTarget.value = client
 }
 
 const filtered = computed(() => {
@@ -138,7 +174,7 @@ async function savePricing() {
     if (existing) await db.update('client_product_prices', existing.id, data)
     else await db.create('client_product_prices', data)
     showPricing.value = false
-  } catch (error) { alert(error.message) }
+  } catch (error) { toast.error(error.message) }
 }
 
 function requestRemove(client) {
@@ -163,6 +199,13 @@ async function confirmRemove() {
 .client-card h3 { margin: 0 0 10px; }
 .client-card p { margin: 6px 0; color: #4b5563; font-size: .9rem; overflow-wrap: anywhere; }
 .client-card .notes { color: #6b7280; }
+.balance-due { color: #b91c1c; font-weight: 600; }
+.statement-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.statement-list a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; color: inherit; }
+.statement-list a:hover { background: #f9fafb; }
+.statement-list small { display: block; color: #6b7280; }
+.statement-total { margin-top: 14px; text-align: right; font-size: 1.05rem; }
+.empty-payments { color: #6b7280; }
 .actions { display: flex; gap: 8px; margin-top: 14px; }
 .icon-button { border: none; background: #f3f4f6; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
 .icon-button.danger:hover { background: #fee2e2; }

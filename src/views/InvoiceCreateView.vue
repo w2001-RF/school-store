@@ -73,7 +73,6 @@
       @close="showClientSearch = false"
       @select="selectClient"
     />
-    <div v-if="toastMessage" class="mobile-toast" role="status" aria-live="polite">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -89,12 +88,14 @@ import ClientSearchDialog from '../components/pos/ClientSearchDialog.vue'
 import PaymentDialog from '../components/pos/PaymentDialog.vue'
 import PosSummary from '../components/pos/PosSummary.vue'
 import ProductSearchDialog from '../components/pos/ProductSearchDialog.vue'
+import { useToast } from '../composables/useToast.js'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const invoices = useInvoicesStore()
 const products = useProductsStore()
 const clients = useClientsStore()
+const toast = useToast()
 const { t } = useI18n()
 const isMobile = ref(false)
 const lastError = ref('')
@@ -107,8 +108,6 @@ const showPayment = ref(false)
 const showProductSearch = ref(false)
 const showClientSearch = ref(false)
 const submitting = ref(false)
-const toastMessage = ref('')
-let toastTimer
 const isPassager = computed(() => {
   const client = clients.items.find(client => client.id === invoices.current?.client_id)
   return !client || client.name?.toLowerCase() === 'passager'
@@ -171,19 +170,13 @@ async function confirmPayment(payment) {
   try {
     const invoice = await invoices.validate(payment)
     showPayment.value = false
-    showToast(t('invoiceCreate.success'))
+    toast.success(t('invoiceCreate.success'))
     await router.push({ name: 'invoice-detail', params: { id: invoice.id } })
   } catch (error) {
-    showToast(error.message)
+    toast.error(error.message)
   } finally {
     submitting.value = false
   }
-}
-
-function showToast(message) {
-  toastMessage.value = message
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => { toastMessage.value = '' }, 3200)
 }
 
 function checkMobile() {
@@ -206,9 +199,6 @@ function checkMobile() {
 .empty-cart .hint { font-size: 0.85rem; }
 .lines { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; margin-bottom: 16px; }
 .error-msg { background: #fee2e2; color: #991b1b; padding: 10px; border-radius: 6px; margin-top: 10px; }
-.mobile-toast { position: fixed; left: 50%; bottom: 22px; z-index: 1100; max-width: calc(100vw - 32px); padding: 13px 18px; transform: translateX(-50%); border-radius: 10px; background: #075b60; color: white; box-shadow: 0 10px 24px rgba(7, 91, 96, .25); text-align: center; font-weight: 600; animation: toast-in .2s ease-out; }
-
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 @media (max-width: 900px) {
   .invoice-grid { grid-template-columns: 1fr; }
@@ -228,6 +218,5 @@ function checkMobile() {
   .customer-input { min-height: 44px; font-size: 16px; }
   .lines { max-height: none; }
   :deep(.pos-summary .pay) { position: fixed; right: 16px; bottom: calc(12px + env(safe-area-inset-bottom)); left: 16px; z-index: 20; min-height: 52px; box-shadow: 0 10px 24px rgba(7, 91, 96, .25); }
-  .mobile-toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
 }
 </style>

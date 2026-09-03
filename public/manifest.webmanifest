@@ -1,0 +1,15 @@
+{
+  "name": "School Store Manager",
+  "short_name": "School Store",
+  "description": "Gestion de boutique scolaire : produits, factures, clients, caisse.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "lang": "fr",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
