@@ -24,6 +24,8 @@
           </label>
           <span class="user-name">{{ auth.user.fullName }}</span>
           <span class="role-badge" :class="auth.user.role">{{ auth.user.role }}</span>
+          <router-link to="/profile" class="btn-icon" :title="$t('profile.shortcut')" :aria-label="$t('profile.shortcut')">👤</router-link>
+          <router-link v-if="auth.isSuperAdmin" to="/organizations" class="btn-icon" :title="$t('organizations.shortcut')" :aria-label="$t('organizations.shortcut')">🏢</router-link>
           <button class="btn-icon" @click="logout" :title="$t('actions.logout')" :aria-label="$t('actions.logout')">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3m8 7v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1" /></svg>
           </button>
@@ -44,18 +46,20 @@ import Sidebar from './Sidebar.vue'
 import { setLocale, supportedLocales } from '../../i18n/index.js'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '../../composables/useTheme.js'
+import { useTenantStore } from '../../stores/tenant.js'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const { t, locale } = useI18n()
 const { preference, setTheme } = useTheme()
+const tenant = useTenantStore()
 const sidebarOpen = ref(false)
 const isRTL = computed(() => locale.value === 'ar')
 
 const titleKeys = {
   dashboard: 'pages.dashboard', products: 'pages.products', categories: 'pages.categories', clients: 'pages.clients',
-  'invoice-new': 'pages.newInvoice', invoices: 'pages.invoices', 'invoice-detail': 'pages.detail'
+  reports: 'pages.reports', team: 'pages.team', organizations: 'organizations.title', profile: 'profile.title', 'invoice-new': 'pages.newInvoice', invoices: 'pages.invoices', 'invoice-detail': 'pages.detail'
 }
 const pageTitle = computed(() => t(titleKeys[route.name] || ''))
 
@@ -65,6 +69,7 @@ function changeLocale(nextLocale) {
 
 async function logout() {
   await auth.signOut()
+  tenant.reset()
   router.push('/login')
 }
 </script>

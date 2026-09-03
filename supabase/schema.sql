@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name TEXT,
   role TEXT NOT NULL CHECK (role IN ('manager', 'agent')) DEFAULT 'agent',
   active BOOLEAN DEFAULT true,
+  is_super_admin BOOLEAN NOT NULL DEFAULT false,
   organization_id UUID REFERENCES organizations(id) DEFAULT '00000000-0000-0000-0000-000000000001',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -216,23 +217,119 @@ RETURNS UUID AS $$
   SELECT organization_id FROM public.organization_members
   WHERE user_id = auth.uid() AND status = 'active'
   LIMIT 1;
-$$ LANGUAGE SQL STABLE;
+$$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.current_user_can_manage_organization(target_organization_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.organization_members
+    WHERE user_id = auth.uid()
+      AND organization_id = target_organization_id
+      AND role IN ('owner', 'manager')
+      AND status = 'active'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_owner(target_organization_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.organization_members
+    WHERE user_id = auth.uid()
+      AND organization_id = target_organization_id
+      AND role = 'owner'
+      AND status = 'active'
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_super_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND is_super_admin = true AND active = true
+  );
+$$ LANGUAGE SQL STABLE SECURITY DEFINER SET search_path = public;
+
+CREATE OR REPLACE FUNCTION public.create_organization(
+  organization_name TEXT,
+  organization_slug TEXT DEFAULT NULL
+)
+RETURNS organizations
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  actor_id UUID := auth.uid();
+  created_organization organizations;
+BEGIN
+  IF actor_id IS NULL OR NOT EXISTS (
+    SELECT 1 FROM profiles WHERE id = actor_id AND role = 'manager' AND active = true
+  ) THEN RAISE EXCEPTION 'PERMISSION_DENIED'; END IF;
+  IF organization_name IS NULL OR btrim(organization_name) = '' THEN
+    RAISE EXCEPTION 'INVALID_ORGANIZATION_NAME';
+  END IF;
+  INSERT INTO organizations (name, slug)
+  VALUES (btrim(organization_name), NULLIF(lower(regexp_replace(COALESCE(organization_slug, organization_name), '[^a-zA-Z0-9]+', '-', 'g')), ''))
+  RETURNING * INTO created_organization;
+  INSERT INTO organization_members (organization_id, user_id, role, status)
+  VALUES (created_organization.id, actor_id, 'owner', 'active');
+  RETURN created_organization;
+EXCEPTION WHEN unique_violation THEN RAISE EXCEPTION 'ORGANIZATION_SLUG_ALREADY_EXISTS';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_organization(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_organization(TEXT, TEXT) TO authenticated;
 
 -- Organisations : un membre ne voit que son organisation
 CREATE POLICY "Members can read their organization" ON organizations
-  FOR SELECT USING (
-    id IN (SELECT organization_id FROM organization_members WHERE user_id = auth.uid())
-  );
+  FOR SELECT USING (id = public.current_user_organization_id() OR public.current_user_is_super_admin());
+
+CREATE POLICY "Super admins manage organizations" ON organizations
+  FOR ALL USING (public.current_user_is_super_admin())
+  WITH CHECK (public.current_user_is_super_admin());
 
 -- Rattachements : un membre voit sa propre ligne ; owner/manager voient toute l'organisation
 CREATE POLICY "Members can read their membership rows" ON organization_members
   FOR SELECT USING (
-    user_id = auth.uid()
-    OR organization_id IN (
-      SELECT organization_id FROM organization_members
-      WHERE user_id = auth.uid() AND role IN ('owner','manager')
-    )
+    organization_id = public.current_user_organization_id()
+    OR public.current_user_is_super_admin()
   );
+
+CREATE POLICY "Owners and managers can update members in their org" ON organization_members
+  FOR UPDATE USING (
+    public.current_user_can_manage_organization(organization_id)
+  )
+  WITH CHECK (
+    role <> 'owner'
+    OR public.current_user_is_owner(organization_id)
+  );
+
+CREATE POLICY "Super admins manage organization members" ON organization_members
+  FOR ALL USING (public.current_user_is_super_admin())
+  WITH CHECK (public.current_user_is_super_admin());
+
+CREATE POLICY "Managers update their organization" ON organizations
+  FOR UPDATE USING (public.current_user_can_manage_organization(id))
+  WITH CHECK (public.current_user_can_manage_organization(id));
+
+CREATE OR REPLACE FUNCTION public.update_my_profile(profile_full_name TEXT)
+RETURNS profiles AS $$
+DECLARE updated_profile profiles;
+BEGIN
+  IF auth.uid() IS NULL OR profile_full_name IS NULL OR btrim(profile_full_name) = '' THEN
+    RAISE EXCEPTION 'INVALID_PROFILE_NAME';
+  END IF;
+  UPDATE profiles SET full_name = btrim(profile_full_name)
+  WHERE id = auth.uid() RETURNING * INTO updated_profile;
+  IF NOT FOUND THEN RAISE EXCEPTION 'PROFILE_NOT_FOUND'; END IF;
+  RETURN updated_profile;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+REVOKE UPDATE ON profiles FROM authenticated;
+REVOKE ALL ON FUNCTION public.update_my_profile(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.update_my_profile(TEXT) TO authenticated;
 
 -- Rattachements : owner/manager peuvent modifier le rôle/statut des membres de leur organisation
 -- (garde-fou : seul un 'owner' existant peut promouvoir un membre au rôle 'owner')
@@ -260,6 +357,9 @@ CREATE POLICY "Owners and managers can update members in their org" ON organizat
 -- Profils
 CREATE POLICY "Users can read all profiles" ON profiles
   FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can update their own profile" ON profiles
+  FOR UPDATE USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
 CREATE POLICY "Managers can manage profiles" ON profiles
   FOR ALL USING (public.current_user_role() = 'manager');
 

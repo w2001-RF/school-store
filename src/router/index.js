@@ -16,7 +16,9 @@ const router = createRouter({
         { path: 'categories', name: 'categories', component: () => import('../views/CategoriesView.vue'), meta: { roles: ['manager'] } },
         { path: 'clients', name: 'clients', component: () => import('../views/ClientsView.vue'), meta: { roles: ['manager'] } },
         { path: 'reports', name: 'reports', component: () => import('../views/ReportsView.vue'), meta: { roles: ['manager'] } },
-        { path: 'team', name: 'team', component: () => import('../views/TeamView.vue'), meta: { roles: ['manager'] } },
+        { path: 'organizations', name: 'organizations', component: () => import('../views/OrganizationsView.vue'), meta: { superAdmin: true } },
+        { path: 'team', name: 'team', component: () => import('../views/TeamView.vue'), meta: { roles: ['agent', 'manager'] } },
+        { path: 'profile', name: 'profile', component: () => import('../views/ProfileView.vue') },
         { path: 'invoices/new', name: 'invoice-new', component: () => import('../views/InvoiceCreateView.vue') },
         { path: 'invoices', name: 'invoices', component: () => import('../views/InvoicesView.vue') },
         { path: 'invoices/:id', name: 'invoice-detail', component: () => import('../views/InvoiceDetailView.vue') }
@@ -41,7 +43,8 @@ router.beforeEach(async (to, from, next) => {
   if (to.meta.public) return next()
   if (!auth.isAuthenticated) return next({ name: 'login' })
   if (to.name === 'login' && auth.isAuthenticated) return next({ name: 'dashboard' })
-  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role)) return next({ name: 'dashboard' })
+  if (to.meta.superAdmin && !auth.isSuperAdmin) return next({ name: 'dashboard' })
+  if (to.meta.roles && !to.meta.roles.includes(auth.user?.role) && !auth.isSuperAdmin) return next({ name: 'dashboard' })
   next()
 })
 

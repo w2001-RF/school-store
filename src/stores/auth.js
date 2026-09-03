@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { AuthService } from '../services/auth/AuthService.js'
+import { db } from '../services/database/index.js'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -9,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!user.value)
   const isManager = computed(() => user.value?.role === 'manager')
+  const isSuperAdmin = computed(() => user.value?.isSuperAdmin === true)
   const isAgent   = computed(() => ['agent', 'manager'].includes(user.value?.role))
 
   async function init() {
@@ -38,10 +40,20 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
   }
 
+  async function updateProfile({ fullName }) {
+    const normalizedName = String(fullName || '').trim()
+    if (!normalizedName) throw new Error('Le nom complet est obligatoire')
+    const updated = db.constructor.name === 'SupabaseAdapter'
+      ? await db.rpc('update_my_profile', { profile_full_name: normalizedName })
+      : await db.update('profiles', user.value.id, { full_name: normalizedName })
+    user.value = { ...user.value, fullName: updated.full_name || normalizedName }
+    return user.value
+  }
+
   return {
     user, loading, error,
-    isAuthenticated, isManager, isAgent,
-    init, signIn, signUp, signOut
+    isAuthenticated, isManager, isSuperAdmin, isAgent,
+    init, signIn, signUp, signOut, updateProfile
   }
 })
   

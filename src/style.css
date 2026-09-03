@@ -149,6 +149,12 @@ body {
 :root[data-theme='dark'] .product-image,
 :root[data-theme='dark'] .scanner-video { background: #0b1716 !important; }
 :root[data-theme='dark'] .manager-actions > label:nth-child(1) > select:nth-child(1) {color: white; }
+:root[data-theme='dark'] .report-table { background-color: var(--line) !important;}
+:root[data-theme='dark'] .org-card { background-color: var(--line) !important;}
+:root[data-theme='dark'] .org-card > p { color: var(--ink) !important;}
+:root[data-theme='dark'] .profile-card { background-color: var(--line) !important;}
+:root[data-theme='dark'] .organization-card { background-color: var(--surface) !important;}
+:root[data-theme='dark'] article.organization-card > p { color: var(--muted) !important;}
 input, button, select, textarea { font-family: inherit; }
 button, a { transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, opacity .18s ease; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(239, 118, 93, .35); outline-offset: 2px; }
