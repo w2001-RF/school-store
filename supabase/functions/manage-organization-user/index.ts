@@ -35,7 +35,13 @@ Deno.serve(async request => {
     const fullName = String(body.fullName || '').trim()
     const role = String(body.role || 'cashier')
     const organizationId = String(body.organizationId || '')
-    if (!email || !fullName || !organizationId || !allowedRoles.has(role)) throw new Error('INVALID_INPUT')
+    const redirectTo = String(body.redirectTo || '').trim()
+    if (!email || !fullName || !organizationId || !redirectTo || !allowedRoles.has(role)) throw new Error('INVALID_INPUT')
+
+    const allowedRedirectOrigin = Deno.env.get('INVITE_REDIRECT_ORIGIN')
+    if (!allowedRedirectOrigin || new URL(redirectTo).origin !== new URL(allowedRedirectOrigin).origin) {
+      throw new Error('INVALID_REDIRECT_URL')
+    }
 
     const { data: actorProfile } = await adminClient
       .from('profiles')
@@ -53,7 +59,8 @@ Deno.serve(async request => {
     if (!isSuperAdmin && (!actor || actor.status !== 'active' || !['owner', 'manager'].includes(actor.role))) throw new Error('PERMISSION_DENIED')
 
     const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName, role: role === 'manager' ? 'manager' : 'agent' }
+      data: { full_name: fullName, role: role === 'manager' ? 'manager' : 'agent' },
+      redirectTo
     })
     if (inviteError) throw inviteError
 

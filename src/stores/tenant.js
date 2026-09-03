@@ -103,11 +103,13 @@ export const useTenantStore = defineStore('tenant', () => {
 
   async function inviteUser({ email, fullName, role }) {
     if (typeof db.invoke !== 'function') throw new Error('Les invitations nécessitent l’adaptateur Supabase')
+    const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}`
     const invited = await db.invoke('manage-organization-user', {
       email,
       fullName,
       role,
-      organizationId: organizationId.value
+      organizationId: organizationId.value,
+      redirectTo
     })
     await fetchMembers()
     return invited
