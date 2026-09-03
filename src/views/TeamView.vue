@@ -141,7 +141,7 @@ const organizationForm = ref({ name: '', slug: '' })
 const inviteForm = ref({ fullName: '', email: '', role: 'cashier' })
 const formError = ref('')
 
-const isSupabase = computed(() => db.constructor.name === 'SupabaseAdapter')
+const isSupabase = computed(() => db.constructor.name === 'SupabaseAdapter' || db.constructor.name === 'Ac')
 const canManageOrganization = computed(() => auth.isSuperAdmin || tenant.isOwnerOrManager)
 
 onMounted(refresh)
